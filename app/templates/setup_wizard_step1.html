@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+
+{% block title %}CA Setup – Welcome{% endblock %}
+
+{% block content %}
+<section class="bg-white shadow rounded-lg p-8 space-y-6">
+  <header class="space-y-3">
+    <p class="text-sm font-semibold uppercase tracking-wide text-blue-600">First-time setup</p>
+    <h1 class="text-3xl font-bold text-gray-900">Welcome to the LabCA setup wizard</h1>
+    <p class="text-gray-700">
+      Get started by creating a brand-new root Certificate Authority or importing an existing CA key pair.
+    </p>
+  </header>
+
+  <form method="post" action="/setup/step1" class="space-y-4">
+    <p class="text-gray-600">This wizard takes a few steps and only needs to run once per environment.</p>
+    <button type="submit" class="inline-flex items-center justify-center rounded-md bg-blue-600 px-6 py-3 text-white font-semibold shadow hover:bg-blue-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+      Get started
+    </button>
+  </form>
+</section>
+{% endblock %}

@@ -1,0 +1,128 @@
+{% extends "base.html" %}
+
+{% block title %}CA Setup – Create Root{% endblock %}
+
+{% block content %}
+<section class="bg-white shadow rounded-lg p-6 md:p-8 space-y-6">
+  <header class="space-y-2">
+    <p class="text-sm font-semibold uppercase tracking-wide text-blue-600">Step 3 – Create Root CA</p>
+    <h1 class="text-3xl font-bold text-gray-900">Define your new Root CA</h1>
+    <p class="text-gray-700">
+      Fill in the display name, subject, and key settings for the Certificate Authority.
+    </p>
+  </header>
+
+  {% if errors %}
+    <div class="rounded-md border border-red-200 bg-red-50 p-3 text-red-900">
+      <p class="font-semibold">Please fix the following:</p>
+      <ul class="list-disc list-inside">
+        {% for error in errors %}
+          <li>{{ error }}</li>
+        {% endfor %}
+      </ul>
+    </div>
+  {% endif %}
+
+  <form method="post" action="/setup/root" class="space-y-6">
+    <div class="grid gap-4 md:grid-cols-2">
+      <div>
+        <label class="block text-sm font-medium text-gray-700" for="name">Display name</label>
+        <input type="text" id="name" name="name" value="{{ form_values.name }}" required class="mt-1 w-full rounded-md border-gray-300 focus:border-blue-500 focus:ring-blue-500" />
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700" for="subject_cn">Subject CN</label>
+        <input type="text" id="subject_cn" name="subject_cn" value="{{ form_values.subject_cn }}" required class="mt-1 w-full rounded-md border-gray-300 focus:border-blue-500 focus:ring-blue-500" />
+      </div>
+    </div>
+    <div class="grid gap-4 md:grid-cols-3">
+      <div>
+        <label class="block text-sm font-medium text-gray-700" for="subject_o">Organization (O)</label>
+        <input type="text" id="subject_o" name="subject_o" value="{{ form_values.subject_o }}" class="mt-1 w-full rounded-md border-gray-300 focus:border-blue-500 focus:ring-blue-500" />
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700" for="subject_ou">Org Unit (OU)</label>
+        <input type="text" id="subject_ou" name="subject_ou" value="{{ form_values.subject_ou }}" class="mt-1 w-full rounded-md border-gray-300 focus:border-blue-500 focus:ring-blue-500" />
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700" for="subject_l">Locality (L)</label>
+        <input type="text" id="subject_l" name="subject_l" value="{{ form_values.subject_l }}" class="mt-1 w-full rounded-md border-gray-300 focus:border-blue-500 focus:ring-blue-500" />
+      </div>
+    </div>
+    <div class="grid gap-4 md:grid-cols-3">
+      <div>
+        <label class="block text-sm font-medium text-gray-700" for="subject_st">State / Province (ST)</label>
+        <input type="text" id="subject_st" name="subject_st" value="{{ form_values.subject_st }}" class="mt-1 w-full rounded-md border-gray-300 focus:border-blue-500 focus:ring-blue-500" />
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700" for="subject_c">Country (C)</label>
+        <input type="text" id="subject_c" name="subject_c" maxlength="2" value="{{ form_values.subject_c }}" class="mt-1 w-full rounded-md border-gray-300 focus:border-blue-500 focus:ring-blue-500" />
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700" for="path_length">Path length</label>
+        <input type="number" id="path_length" name="path_length" min="0" value="{{ form_values.path_length }}" class="mt-1 w-full rounded-md border-gray-300 focus:border-blue-500 focus:ring-blue-500" />
+        <p class="text-xs text-gray-500 mt-1">Optional. Controls depth of intermediates.</p>
+      </div>
+    </div>
+
+    <section class="border border-gray-200 rounded-lg p-4 space-y-4">
+      <h2 class="text-lg font-semibold text-gray-900">Key settings</h2>
+      <div class="grid gap-4 md:grid-cols-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700" for="key_algorithm">Algorithm</label>
+          <select id="key_algorithm" name="key_algorithm" class="mt-1 w-full rounded-md border-gray-300 focus:border-blue-500 focus:ring-blue-500">
+            <option value="RSA" {% if form_values.key_algorithm == "RSA" %}selected{% endif %}>RSA</option>
+            <option value="ECDSA" {% if form_values.key_algorithm == "ECDSA" %}selected{% endif %}>ECDSA</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700" for="key_size">RSA key size</label>
+          <select id="key_size" name="key_size" class="mt-1 w-full rounded-md border-gray-300 focus:border-blue-500 focus:ring-blue-500">
+            {% for size in [2048, 3072, 4096] %}
+              <option value="{{ size }}" {% if form_values.key_size|int == size %}selected{% endif %}>{{ size }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700" for="curve">ECDSA curve</label>
+          <select id="curve" name="curve" class="mt-1 w-full rounded-md border-gray-300 focus:border-blue-500 focus:ring-blue-500">
+            {% for curve in ["P-256", "P-384", "P-521"] %}
+              <option value="{{ curve }}" {% if form_values.curve == curve %}selected{% endif %}>{{ curve }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700" for="hash_algorithm">Hash</label>
+          <select id="hash_algorithm" name="hash_algorithm" class="mt-1 w-full rounded-md border-gray-300 focus:border-blue-500 focus:ring-blue-500">
+            {% for algo in ["SHA256", "SHA384", "SHA512"] %}
+              <option value="{{ algo }}" {% if form_values.hash_algorithm == algo %}selected{% endif %}>{{ algo }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700" for="validity_years">Validity (years)</label>
+        <input type="number" id="validity_years" name="validity_years" min="1" max="25" value="{{ form_values.validity_years }}" class="mt-1 w-full rounded-md border-gray-300 focus:border-blue-500 focus:ring-blue-500" />
+      </div>
+    </section>
+
+    <section class="border border-gray-200 rounded-lg p-4 space-y-4">
+      <h2 class="text-lg font-semibold text-gray-900">Security &amp; downloads</h2>
+      <label class="flex items-center space-x-2">
+        <input type="checkbox" name="download_cert" value="true" class="rounded border-gray-300 text-blue-600 focus:ring-blue-500" {% if form_values.download_cert %}checked{% endif %} />
+        <span class="text-sm text-gray-700">Offer CA bundle download upon completion</span>
+      </label>
+      <div>
+        <label class="block text-sm font-medium text-gray-700" for="master_passphrase">Master passphrase (optional)</label>
+        <input type="password" id="master_passphrase" name="master_passphrase" value="{{ form_values.master_passphrase }}" class="mt-1 w-full rounded-md border-gray-300 focus:border-blue-500 focus:ring-blue-500" placeholder="Used for future key encryption" />
+      </div>
+    </section>
+
+    <div class="flex justify-between">
+      <a href="/setup/step2" class="text-sm text-gray-600 hover:text-gray-900">Back</a>
+      <button type="submit" class="inline-flex items-center justify-center rounded-md bg-blue-600 px-6 py-3 text-white font-semibold shadow hover:bg-blue-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+        Review details
+      </button>
+    </div>
+  </form>
+</section>
+{% endblock %}

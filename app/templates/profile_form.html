@@ -1,0 +1,163 @@
+{% extends "base.html" %}
+
+{% block title %}{{ "Edit" if mode == "edit" else "New" }} Profile{% endblock %}
+
+{% block content %}
+<section class="bg-white shadow rounded-lg p-6 md:p-8 space-y-8 max-w-4xl mx-auto">
+  <header class="space-y-2">
+    <p class="text-sm font-semibold uppercase tracking-wide text-blue-600">Profiles</p>
+    <h1 class="text-3xl font-bold text-gray-900">{{ "Edit profile" if mode == "edit" else "Create profile" }}</h1>
+  </header>
+
+  <form method="post" class="space-y-6">
+    <section class="space-y-4">
+      <h2 class="text-xl font-semibold text-gray-900">General</h2>
+      <div class="grid gap-6 md:grid-cols-2">
+        <div>
+          <label for="name" class="block text-sm font-medium text-gray-700">Name</label>
+          <input type="text" id="name" name="name" value="{{ form_values.name }}" required class="mt-1 w-full rounded-md border-gray-300 focus:border-blue-500 focus:ring-blue-500">
+        </div>
+        <div>
+          <label for="profile_type" class="block text-sm font-medium text-gray-700">Profile type</label>
+          <select id="profile_type" name="profile_type" class="mt-1 w-full rounded-md border-gray-300 focus:border-blue-500 focus:ring-blue-500">
+            {% for option in profile_types %}
+              <option value="{{ option.value }}" {% if form_values.profile_type == option.value %}selected{% endif %}>{{ option.value.replace("_", " ").title() }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+      <div>
+        <label for="description" class="block text-sm font-medium text-gray-700">Description</label>
+        <textarea id="description" name="description" rows="2" class="mt-1 w-full rounded-md border-gray-300 focus:border-blue-500 focus:ring-blue-500">{{ form_values.description }}</textarea>
+      </div>
+      <div>
+        <label for="default_issuer_ca_id" class="block text-sm font-medium text-gray-700">Default issuer CA</label>
+        <select id="default_issuer_ca_id" name="default_issuer_ca_id" class="mt-1 w-full rounded-md border-gray-300 focus:border-blue-500 focus:ring-blue-500">
+          <option value="">None</option>
+          {% for ca in authorities %}
+            <option value="{{ ca.id }}" {% if form_values.default_issuer_ca_id == ca.id %}selected{% endif %}>{{ ca.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    </section>
+
+    <section class="space-y-4">
+      <h2 class="text-xl font-semibold text-gray-900">Subject template</h2>
+      <div class="grid gap-4 md:grid-cols-3">
+        <div>
+          <label for="subject_cn" class="block text-sm font-medium text-gray-700">CN</label>
+          <input type="text" id="subject_cn" name="subject_cn" value="{{ form_values.subject_cn }}" class="mt-1 w-full rounded-md border-gray-300 focus:border-blue-500 focus:ring-blue-500">
+        </div>
+        <div>
+          <label for="subject_o" class="block text-sm font-medium text-gray-700">O</label>
+          <input type="text" id="subject_o" name="subject_o" value="{{ form_values.subject_o }}" class="mt-1 w-full rounded-md border-gray-300 focus:border-blue-500 focus:ring-blue-500">
+        </div>
+        <div>
+          <label for="subject_ou" class="block text-sm font-medium text-gray-700">OU</label>
+          <input type="text" id="subject_ou" name="subject_ou" value="{{ form_values.subject_ou }}" class="mt-1 w-full rounded-md border-gray-300 focus:border-blue-500 focus:ring-blue-500">
+        </div>
+        <div>
+          <label for="subject_c" class="block text-sm font-medium text-gray-700">C</label>
+          <input type="text" id="subject_c" name="subject_c" value="{{ form_values.subject_c }}" class="mt-1 w-full rounded-md border-gray-300 focus:border-blue-500 focus:ring-blue-500">
+        </div>
+        <div>
+          <label for="subject_st" class="block text-sm font-medium text-gray-700">ST</label>
+          <input type="text" id="subject_st" name="subject_st" value="{{ form_values.subject_st }}" class="mt-1 w-full rounded-md border-gray-300 focus:border-blue-500 focus:ring-blue-500">
+        </div>
+        <div>
+          <label for="subject_l" class="block text-sm font-medium text-gray-700">L</label>
+          <input type="text" id="subject_l" name="subject_l" value="{{ form_values.subject_l }}" class="mt-1 w-full rounded-md border-gray-300 focus:border-blue-500 focus:ring-blue-500">
+        </div>
+      </div>
+    </section>
+
+    <section class="space-y-4">
+      <h2 class="text-xl font-semibold text-gray-900">Key &amp; validity</h2>
+      <div class="grid gap-4 md:grid-cols-3">
+        <div>
+          <label for="key_algorithm" class="block text-sm font-medium text-gray-700">Algorithm</label>
+          <select id="key_algorithm" name="key_algorithm" class="mt-1 w-full rounded-md border-gray-300 focus:border-blue-500 focus:ring-blue-500">
+            <option value="RSA" {% if form_values.key_algorithm == "RSA" %}selected{% endif %}>RSA</option>
+            <option value="ECDSA" {% if form_values.key_algorithm == "ECDSA" %}selected{% endif %}>ECDSA</option>
+          </select>
+        </div>
+        <div>
+          <label for="key_size" class="block text-sm font-medium text-gray-700">Key size</label>
+          <select id="key_size" name="key_size" class="mt-1 w-full rounded-md border-gray-300 focus:border-blue-500 focus:ring-blue-500">
+            {% for size in [2048, 3072, 4096] %}
+              <option value="{{ size }}" {% if form_values.key_size|int == size %}selected{% endif %}>{{ size }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <label for="validity_days_default" class="block text-sm font-medium text-gray-700">Validity (days)</label>
+          <input type="number" id="validity_days_default" name="validity_days_default" value="{{ form_values.validity_days_default }}" class="mt-1 w-full rounded-md border-gray-300 focus:border-blue-500 focus:ring-blue-500">
+        </div>
+      </div>
+      <div class="grid gap-4 md:grid-cols-2">
+        <div>
+          <label for="validity_days_min" class="block text-sm font-medium text-gray-700">Min days</label>
+          <input type="number" id="validity_days_min" name="validity_days_min" value="{{ form_values.validity_days_min }}" class="mt-1 w-full rounded-md border-gray-300 focus:border-blue-500 focus:ring-blue-500">
+        </div>
+        <div>
+          <label for="validity_days_max" class="block text-sm font-medium text-gray-700">Max days</label>
+          <input type="number" id="validity_days_max" name="validity_days_max" value="{{ form_values.validity_days_max }}" class="mt-1 w-full rounded-md border-gray-300 focus:border-blue-500 focus:ring-blue-500">
+        </div>
+      </div>
+    </section>
+
+    <section class="space-y-4">
+      <h2 class="text-xl font-semibold text-gray-900">Usage &amp; extensions</h2>
+      <div>
+        <label for="usage_config_json" class="block text-sm font-medium text-gray-700">Usage config (JSON)</label>
+        <textarea id="usage_config_json" name="usage_config_json" rows="6" class="mt-1 w-full rounded-md border-gray-300 font-mono text-sm focus:border-blue-500 focus:ring-blue-500">{{ form_values.usage_config_json }}</textarea>
+        <p class="mt-1 text-xs text-gray-500">Include fields like <code>{"is_ca": false, "key_usage": {...}}</code>.</p>
+      </div>
+    </section>
+
+    <section class="space-y-4">
+      <h2 class="text-xl font-semibold text-gray-900">Output &amp; storage</h2>
+      <div>
+        <label for="output_config_json" class="block text-sm font-medium text-gray-700">Output config (JSON)</label>
+        <textarea id="output_config_json" name="output_config_json" rows="4" class="mt-1 w-full rounded-md border-gray-300 font-mono text-sm focus:border-blue-500 focus:ring-blue-500">{{ form_values.output_config_json }}</textarea>
+      </div>
+      <div class="grid gap-4 md:grid-cols-2">
+        <label class="flex items-start space-x-3">
+          <input type="checkbox" name="store_in_db_default" class="mt-1 rounded border-gray-300 text-blue-600 focus:ring-blue-500" {% if form_values.store_in_db_default %}checked{% endif %}>
+          <span>
+            <span class="font-medium text-gray-900">Store certificate in database</span>
+          </span>
+        </label>
+        <label class="flex items-start space-x-3">
+          <input type="checkbox" name="available_in_simple_mode" class="mt-1 rounded border-gray-300 text-blue-600 focus:ring-blue-500" {% if form_values.available_in_simple_mode %}checked{% endif %}>
+          <span>
+            <span class="font-medium text-gray-900">Available in quick/simple mode</span>
+          </span>
+        </label>
+      </div>
+      <div class="grid gap-4 md:grid-cols-2">
+        <div>
+          <label for="environment_tags_default" class="block text-sm font-medium text-gray-700">Environment tags</label>
+          <input type="text" id="environment_tags_default" name="environment_tags_default" value="{{ form_values.environment_tags_default }}" class="mt-1 w-full rounded-md border-gray-300 focus:border-blue-500 focus:ring-blue-500" placeholder="prod, hightrust">
+        </div>
+        <div>
+          <label for="owner_default" class="block text-sm font-medium text-gray-700">Owner</label>
+          <input type="text" id="owner_default" name="owner_default" value="{{ form_values.owner_default }}" class="mt-1 w-full rounded-md border-gray-300 focus:border-blue-500 focus:ring-blue-500">
+        </div>
+      </div>
+      <label class="flex items-start space-x-3">
+        <input type="checkbox" name="active" class="mt-1 rounded border-gray-300 text-blue-600 focus:ring-blue-500" {% if form_values.active %}checked{% endif %}>
+        <span>
+          <span class="font-medium text-gray-900">Profile active</span>
+        </span>
+      </label>
+    </section>
+
+    <div class="flex justify-end">
+      <button type="submit" class="inline-flex items-center rounded-md bg-blue-600 px-6 py-3 text-white font-semibold shadow hover:bg-blue-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+        Save profile
+      </button>
+    </div>
+  </form>
+</section>
+{% endblock %}

@@ -1,0 +1,246 @@
+{% extends "base.html" %}
+
+{% block title %}API Access & Tokens{% endblock %}
+
+{% block content %}
+<section class="space-y-8">
+  <div class="bg-white shadow rounded-lg p-6">
+    <div class="flex flex-col gap-2 mb-4">
+      <h1 class="text-2xl font-semibold">API Tokens</h1>
+      <p class="text-sm text-gray-600">
+        Create scoped tokens for automation. Each token exposes its prefix so you can identify usage without revealing
+        the full secret.
+      </p>
+    </div>
+
+    {% if tokens %}
+      <div class="overflow-x-auto">
+        <table class="min-w-full text-sm">
+          <thead>
+            <tr class="text-left text-gray-500 border-b">
+              <th class="py-2 pr-4">Name</th>
+              <th class="py-2 pr-4">Prefix</th>
+              <th class="py-2 pr-4">Permissions</th>
+              <th class="py-2 pr-4">Expires</th>
+              <th class="py-2 pr-4">Last used</th>
+              <th class="py-2 pr-4">Created</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for token in tokens %}
+              <tr class="border-b last:border-0">
+                <td class="py-2 pr-4 font-medium text-gray-900">{{ token.name }}</td>
+                <td class="py-2 pr-4 font-mono text-sm text-gray-700">{{ token.token_prefix }}</td>
+                <td class="py-2 pr-4 space-x-2">
+                  {% if token.permissions.issue %}
+                    <span class="inline-flex items-center px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 text-xs">issue</span>
+                  {% endif %}
+                  {% if token.permissions.read %}
+                    <span class="inline-flex items-center px-2 py-0.5 rounded-full bg-green-100 text-green-800 text-xs">read</span>
+                  {% endif %}
+                  {% if token.permissions.revoke %}
+                    <span class="inline-flex items-center px-2 py-0.5 rounded-full bg-red-100 text-red-800 text-xs">revoke</span>
+                  {% endif %}
+                  {% if not (token.permissions.issue or token.permissions.read or token.permissions.revoke) %}
+                    <span class="text-xs text-gray-400">none</span>
+                  {% endif %}
+                </td>
+                <td class="py-2 pr-4 text-gray-700">
+                  {% if token.expires_at %}
+                    {{ token.expires_at.strftime("%Y-%m-%d %H:%M UTC") }}
+                  {% else %}
+                    <span class="text-gray-400">never</span>
+                  {% endif %}
+                </td>
+                <td class="py-2 pr-4 text-gray-700">
+                  {% if token.last_used_at %}
+                    {{ token.last_used_at.strftime("%Y-%m-%d %H:%M UTC") }}
+                  {% else %}
+                    <span class="text-gray-400">never</span>
+                  {% endif %}
+                </td>
+                <td class="py-2 pr-4 text-gray-700">{{ token.created_at.strftime("%Y-%m-%d %H:%M UTC") }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <p class="text-sm text-gray-500">No API tokens exist yet.</p>
+    {% endif %}
+  </div>
+
+  <div id="create-token" class="bg-white shadow rounded-lg p-6">
+    <div class="flex flex-col gap-2 mb-4">
+      <h2 class="text-xl font-semibold">Create a Token</h2>
+      <p class="text-sm text-gray-600">
+        Provide the admin secret (<code class="font-mono">API_TOKEN_CREATION_SECRET</code>) to mint a token. The raw
+        value is only shown once after creation.
+      </p>
+    </div>
+
+    {% if form_errors %}
+      <div class="mb-4 space-y-2">
+        {% for error in form_errors %}
+          <div class="px-4 py-2 rounded bg-red-50 text-red-700 text-sm">{{ error }}</div>
+        {% endfor %}
+      </div>
+    {% endif %}
+
+    {% if created_token_value %}
+      <div class="mb-4 border border-dashed border-blue-300 rounded bg-blue-50 p-4">
+        <p class="text-sm font-semibold text-blue-900 mb-2">New token value</p>
+        <code class="block font-mono text-sm break-words text-blue-900">{{ created_token_value }}</code>
+      </div>
+    {% endif %}
+
+    <form method="post" class="space-y-4">
+      <div>
+        <label for="name" class="block text-sm font-medium text-gray-700">Token name</label>
+        <input
+          type="text"
+          id="name"
+          name="name"
+          value="{{ form_values.name }}"
+          class="mt-1 w-full rounded border-gray-300 focus:ring-blue-500 focus:border-blue-500"
+          required
+        />
+      </div>
+
+      <div>
+        <p class="block text-sm font-medium text-gray-700 mb-2">Permissions</p>
+        <div class="flex flex-wrap gap-4 text-sm text-gray-700">
+          <label class="inline-flex items-center gap-2">
+            <input type="checkbox" name="perm_issue" {% if form_values.perm_issue %}checked{% endif %} class="rounded border-gray-300 text-blue-600" />
+            Issue certificates
+          </label>
+          <label class="inline-flex items-center gap-2">
+            <input type="checkbox" name="perm_read" {% if form_values.perm_read %}checked{% endif %} class="rounded border-gray-300 text-blue-600" />
+            Read certificates
+          </label>
+          <label class="inline-flex items-center gap-2">
+            <input type="checkbox" name="perm_revoke" {% if form_values.perm_revoke %}checked{% endif %} class="rounded border-gray-300 text-blue-600" />
+            Revoke (future use)
+          </label>
+        </div>
+      </div>
+
+      <div class="grid gap-4 sm:grid-cols-2">
+        <div>
+          <label for="expires_at" class="block text-sm font-medium text-gray-700">Expires (UTC)</label>
+          <input
+            type="datetime-local"
+            id="expires_at"
+            name="expires_at"
+            value="{{ form_values.expires_at }}"
+            class="mt-1 w-full rounded border-gray-300 focus:ring-blue-500 focus:border-blue-500"
+          />
+          <p class="mt-1 text-xs text-gray-500">Leave empty for non-expiring tokens.</p>
+        </div>
+        <div>
+          <label for="admin_secret" class="block text-sm font-medium text-gray-700">Admin secret</label>
+          <input
+            type="password"
+            id="admin_secret"
+            name="admin_secret"
+            class="mt-1 w-full rounded border-gray-300 focus:ring-blue-500 focus:border-blue-500"
+            required
+          />
+        </div>
+      </div>
+
+      <div>
+        <button
+          type="submit"
+          class="inline-flex items-center px-4 py-2 rounded bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-60"
+          {% if not creation_enabled %}disabled{% endif %}
+        >
+          Generate token
+        </button>
+        {% if not creation_enabled %}
+          <p class="mt-2 text-xs text-red-600">Token creation is disabled until API_TOKEN_CREATION_SECRET is configured.</p>
+        {% endif %}
+      </div>
+    </form>
+  </div>
+
+  <div class="bg-white shadow rounded-lg p-6 space-y-4">
+    <div>
+      <h2 class="text-xl font-semibold mb-2">Usage Examples</h2>
+      <p class="text-sm text-gray-600">All API calls need <code class="font-mono">Authorization: Bearer &lt;token&gt;</code>.</p>
+    </div>
+
+    <div class="space-y-3">
+      <h3 class="text-lg font-semibold">Issue from an existing CA</h3>
+      <pre class="bg-gray-900 text-gray-100 text-xs rounded-lg p-4 overflow-auto"><code>curl -X POST http://localhost:8000/api/v1/certificates \
+  -H "Authorization: Bearer $LABCA_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "issuer_ca_id": "ca-id-here",
+    "common_name": "service.lab",
+    "dns_sans": ["service.lab"],
+    "key_algorithm": "RSA",
+    "key_size": 2048,
+    "hash_algorithm": "SHA256",
+    "validity_days": 365,
+    "usage_preset": "server_tls",
+    "return_private_key": true,
+    "store_in_db": true
+  }'</code></pre>
+    </div>
+
+    <div class="space-y-3">
+      <h3 class="text-lg font-semibold">Self-signed certificate (no CA)</h3>
+      <pre class="bg-gray-900 text-gray-100 text-xs rounded-lg p-4 overflow-auto"><code>curl -X POST http://localhost:8000/api/v1/certificates \
+  -H "Authorization: Bearer $LABCA_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "issuer_ca_id": null,
+    "common_name": "dev.lab",
+    "dns_sans": ["dev.lab", "localhost"],
+    "key_algorithm": "ECDSA",
+    "curve": "P-256",
+    "hash_algorithm": "SHA256",
+    "validity_days": 30,
+    "return_private_key": true
+  }'</code></pre>
+    </div>
+
+    <div class="space-y-3">
+      <h3 class="text-lg font-semibold">Fetch certificate details</h3>
+      <pre class="bg-gray-900 text-gray-100 text-xs rounded-lg p-4 overflow-auto"><code>curl -X GET "http://localhost:8000/api/v1/certificates/{certificate_id}?include_private_key=false" \
+  -H "Authorization: Bearer $LABCA_TOKEN"</code></pre>
+      <p class="text-xs text-gray-500">
+        Set <code>include_private_key=true</code> to retrieve the key when policy allows it. The response always includes
+        <code>certificate_pem</code> plus metadata (owner, validity, status, tags, and whether key downloads are allowed).
+      </p>
+    </div>
+
+    <div class="space-y-3">
+      <h3 class="text-lg font-semibold">Python quick start</h3>
+      <pre class="bg-gray-900 text-gray-100 text-xs rounded-lg p-4 overflow-auto"><code class="language-python">import requests
+
+token = "YOUR_TOKEN_HERE"
+resp = requests.post(
+    "http://localhost:8000/api/v1/certificates",
+    headers={"Authorization": f"Bearer {token}"},
+    json={
+        "issuer_ca_id": "ca-id-here",
+        "common_name": "api.lab",
+        "dns_sans": ["api.lab"],
+        "key_algorithm": "RSA",
+        "key_size": 2048,
+        "hash_algorithm": "SHA256",
+        "validity_days": 90,
+        "return_private_key": True,
+    },
+    timeout=10,
+)
+resp.raise_for_status()
+bundle = resp.json()
+print(bundle["certificate_pem"])
+      </code></pre>
+    </div>
+  </div>
+</section>
+{% endblock %}

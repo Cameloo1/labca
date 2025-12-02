@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+
+{% block title %}Settings{% endblock %}
+
+{% block content %}
+<section class="bg-white shadow rounded-lg p-6 md:p-8 space-y-8">
+  <header class="space-y-2">
+    <p class="text-sm font-semibold uppercase tracking-wide text-blue-600">Administration</p>
+    <h1 class="text-3xl font-bold text-gray-900">LabCA Settings</h1>
+    <p class="text-gray-700">Configure default issuance values and platform security controls.</p>
+  </header>
+
+  <form method="post" class="space-y-10">
+    <section class="space-y-4">
+      <h2 class="text-xl font-semibold text-gray-900">General</h2>
+      <div class="grid gap-6 md:grid-cols-2">
+        <div>
+          <label for="app_name" class="block text-sm font-medium text-gray-700">App name</label>
+          <input type="text" id="app_name" name="app_name" value="{{ settings.app_name or '' }}" class="mt-1 w-full rounded-md border-gray-300 focus:border-blue-500 focus:ring-blue-500" placeholder="LabCA" />
+          <p class="mt-1 text-xs text-gray-500">Shown in navigation and titles.</p>
+        </div>
+        <div>
+          <label for="default_validity_days" class="block text-sm font-medium text-gray-700">Default validity (days)</label>
+          <input type="number" id="default_validity_days" name="default_validity_days" min="1" value="{{ settings.default_validity_days }}" class="mt-1 w-full rounded-md border-gray-300 focus:border-blue-500 focus:ring-blue-500" />
+        </div>
+      </div>
+      <div class="grid gap-6 md:grid-cols-3">
+        <div>
+          <label for="default_key_algorithm" class="block text-sm font-medium text-gray-700">Default key algorithm</label>
+          <select id="default_key_algorithm" name="default_key_algorithm" class="mt-1 w-full rounded-md border-gray-300 focus:border-blue-500 focus:ring-blue-500">
+            <option value="RSA" {% if settings.default_key_algorithm == "RSA" %}selected{% endif %}>RSA</option>
+            <option value="ECDSA" {% if settings.default_key_algorithm == "ECDSA" %}selected{% endif %}>ECDSA</option>
+          </select>
+        </div>
+        <div>
+          <label for="default_key_size" class="block text-sm font-medium text-gray-700">Default key size</label>
+          <select id="default_key_size" name="default_key_size" class="mt-1 w-full rounded-md border-gray-300 focus:border-blue-500 focus:ring-blue-500">
+            {% for size in [2048, 3072, 4096] %}
+              <option value="{{ size }}" {% if settings.default_key_size == size %}selected{% endif %}>{{ size }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <label for="max_leaf_validity_days" class="block text-sm font-medium text-gray-700">Max leaf validity (days)</label>
+          <input type="number" id="max_leaf_validity_days" name="max_leaf_validity_days" min="1" value="{{ settings.max_leaf_validity_days }}" class="mt-1 w-full rounded-md border-gray-300 focus:border-blue-500 focus:ring-blue-500" />
+        </div>
+      </div>
+    </section>
+
+    <section class="space-y-4">
+      <h2 class="text-xl font-semibold text-gray-900">Security</h2>
+      <div class="grid gap-6 md:grid-cols-2">
+        <label class="flex items-start space-x-3">
+          <input type="checkbox" name="require_login" value="true" class="mt-1 rounded border-gray-300 text-blue-600 focus:ring-blue-500" {% if settings.require_login %}checked{% endif %} />
+          <span>
+            <span class="font-medium text-gray-900">Require login</span>
+            <p class="text-sm text-gray-600">Reserve console access for authenticated users (future integration).</p>
+          </span>
+        </label>
+        <label class="flex items-start space-x-3">
+          <input type="checkbox" name="allow_intermediate_issuance" value="true" class="mt-1 rounded border-gray-300 text-blue-600 focus:ring-blue-500" {% if settings.allow_intermediate_issuance %}checked{% endif %} />
+          <span>
+            <span class="font-medium text-gray-900">Allow intermediate CA issuance</span>
+            <p class="text-sm text-gray-600">Enable creation of subordinate CAs from LabCA.</p>
+          </span>
+        </label>
+      </div>
+      <div>
+        <p class="text-sm font-medium text-gray-700 mb-3">Key download policy</p>
+        <div class="grid gap-3 md:grid-cols-2">
+          {% for option in policy_options %}
+            <label class="flex items-start space-x-3 border border-gray-200 rounded-lg p-3">
+              <input type="radio" name="allow_key_download_policy" value="{{ option.value }}" class="mt-1 text-blue-600 focus:ring-blue-500" {% if settings.allow_key_download_policy == option %}checked{% endif %} />
+              <span>
+                <span class="font-semibold text-gray-900">{{ option.value.replace("_", " ").title() }}</span>
+                <p class="text-sm text-gray-600">
+                  {% if option.value == "ALL" %}
+                    Allow all certificate private key downloads.
+                  {% elif option.value == "LEAF_ONLY" %}
+                    Restrict to leaf certificates.
+                  {% elif option.value == "CA_DISABLED" %}
+                    Block CA key downloads.
+                  {% else %}
+                    Disable every private key download.
+                  {% endif %}
+                </p>
+              </span>
+            </label>
+          {% endfor %}
+        </div>
+      </div>
+      <div class="flex flex-col gap-2 md:flex-row md:items-center md:justify-between border border-gray-200 rounded-lg p-4">
+        <div>
+          <p class="text-sm font-medium text-gray-700">Key storage encryption</p>
+          <p class="text-sm text-gray-600">{{ "Enabled" if settings.key_storage_encryption_enabled else "Disabled" }}</p>
+        </div>
+        <button type="button" class="inline-flex items-center rounded-md border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-500 cursor-not-allowed" title="Coming soon">
+          Rotate KEK
+        </button>
+      </div>
+    </section>
+
+    <div class="flex justify-end">
+      <button type="submit" class="inline-flex items-center rounded-md bg-blue-600 px-6 py-3 text-white font-semibold shadow hover:bg-blue-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+        Save settings
+      </button>
+    </div>
+  </form>
+</section>
+{% endblock %}

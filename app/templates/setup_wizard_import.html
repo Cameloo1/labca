@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+
+{% block title %}CA Setup – Import{% endblock %}
+
+{% block content %}
+<section class="bg-white shadow rounded-lg p-6 md:p-8 space-y-6">
+  <header class="space-y-2">
+    <p class="text-sm font-semibold uppercase tracking-wide text-blue-600">Step 3 – Import CA</p>
+    <h1 class="text-3xl font-bold text-gray-900">Import an existing Certificate Authority</h1>
+    <p class="text-gray-700">
+      Paste the PEM-encoded certificate and private key. Keys remain in memory until encrypted for storage.
+    </p>
+  </header>
+
+  {% if errors %}
+    <div class="rounded-md border border-red-200 bg-red-50 p-3 text-red-900">
+      <p class="font-semibold">Please fix the following:</p>
+      <ul class="list-disc list-inside">
+        {% for error in errors %}
+          <li>{{ error }}</li>
+        {% endfor %}
+      </ul>
+    </div>
+  {% endif %}
+
+  <form method="post" action="/setup/import" class="space-y-4">
+    <div>
+      <label class="block text-sm font-medium text-gray-700" for="name">Display name</label>
+      <input type="text" id="name" name="name" value="{{ form_values.name }}" required class="mt-1 w-full rounded-md border-gray-300 focus:border-blue-500 focus:ring-blue-500" />
+    </div>
+    <div>
+      <label class="block text-sm font-medium text-gray-700" for="cert_pem">Certificate (PEM)</label>
+      <textarea id="cert_pem" name="cert_pem" rows="8" required class="mt-1 w-full rounded-md border-gray-300 font-mono text-sm focus:border-blue-500 focus:ring-blue-500">{{ form_values.cert_pem }}</textarea>
+    </div>
+    <div>
+      <label class="block text-sm font-medium text-gray-700" for="key_pem">Private key (PEM)</label>
+      <textarea id="key_pem" name="key_pem" rows="8" required class="mt-1 w-full rounded-md border-gray-300 font-mono text-sm focus:border-blue-500 focus:ring-blue-500">{{ form_values.key_pem }}</textarea>
+    </div>
+    <div class="grid gap-4 md:grid-cols-2">
+      <div>
+        <label class="block text-sm font-medium text-gray-700" for="key_passphrase">Key passphrase</label>
+        <input type="password" id="key_passphrase" name="key_passphrase" value="{{ form_values.key_passphrase }}" class="mt-1 w-full rounded-md border-gray-300 focus:border-blue-500 focus:ring-blue-500" placeholder="Only if the key is encrypted" />
+      </div>
+      <label class="flex items-start space-x-2 mt-6">
+        <input type="checkbox" name="allow_intermediate_issuance" value="true" class="mt-1 rounded border-gray-300 text-blue-600 focus:ring-blue-500" {% if form_values.allow_intermediate_issuance %}checked{% endif %} />
+        <span class="text-sm text-gray-700">Allow this CA to issue intermediates inside LabCA</span>
+      </label>
+    </div>
+    <div>
+      <label class="block text-sm font-medium text-gray-700" for="master_passphrase">Master passphrase (optional)</label>
+      <input type="password" id="master_passphrase" name="master_passphrase" value="{{ form_values.master_passphrase }}" class="mt-1 w-full rounded-md border-gray-300 focus:border-blue-500 focus:ring-blue-500" />
+    </div>
+
+    <div class="flex justify-between pt-4">
+      <a href="/setup/step2" class="text-sm text-gray-600 hover:text-gray-900">Back</a>
+      <button type="submit" class="inline-flex items-center justify-center rounded-md bg-blue-600 px-6 py-3 text-white font-semibold shadow hover:bg-blue-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+        Review details
+      </button>
+    </div>
+  </form>
+</section>
+{% endblock %}

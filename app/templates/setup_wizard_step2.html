@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+
+{% block title %}CA Setup – Choose Source{% endblock %}
+
+{% block content %}
+<section class="bg-white shadow rounded-lg p-6 md:p-8 space-y-6">
+  <header>
+    <p class="text-sm font-semibold uppercase tracking-wide text-blue-600">Step 2 of 5</p>
+    <h1 class="text-3xl font-bold text-gray-900">How would you like to supply a Certificate Authority?</h1>
+    <p class="text-gray-700 mt-2">
+      You can create a new lab-only root CA or import an existing CA certificate + key.
+    </p>
+  </header>
+
+  {% if error %}
+    <div class="rounded-md border border-red-200 bg-red-50 p-3 text-red-900">
+      {{ error }}
+    </div>
+  {% endif %}
+
+  <form method="post" action="/setup/step2" class="space-y-6">
+    <div class="space-y-4">
+      <label class="flex items-start space-x-3 border border-gray-200 rounded-lg p-4 cursor-pointer">
+        <input type="radio" name="ca_source" value="create" class="mt-1 text-blue-600 focus:ring-blue-500" />
+        <span>
+          <span class="text-lg font-semibold text-gray-900">Create a new Root CA</span>
+          <p class="text-gray-600">Generate keys and issue a fresh CA certificate within LabCA.</p>
+        </span>
+      </label>
+      <label class="flex items-start space-x-3 border border-gray-200 rounded-lg p-4 cursor-pointer">
+        <input type="radio" name="ca_source" value="import" class="mt-1 text-blue-600 focus:ring-blue-500" />
+        <span>
+          <span class="text-lg font-semibold text-gray-900">Import an existing CA</span>
+          <p class="text-gray-600">Bring your own CA certificate and private key (PEM).</p>
+        </span>
+      </label>
+    </div>
+    <div class="flex justify-between">
+      <a href="/setup" class="text-sm text-gray-600 hover:text-gray-900">Back</a>
+      <button type="submit" class="inline-flex items-center justify-center rounded-md bg-blue-600 px-6 py-3 text-white font-semibold shadow hover:bg-blue-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+        Continue
+      </button>
+    </div>
+  </form>
+</section>
+{% endblock %}

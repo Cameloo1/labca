@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+
+{% block title %}Help &amp; Examples{% endblock %}
+
+{% block content %}
+<section class="bg-white shadow rounded-lg p-8 space-y-8">
+  <header>
+    <p class="text-sm uppercase tracking-wide text-blue-600 font-semibold">Guides</p>
+    <h1 class="mt-2 text-3xl font-bold text-gray-900">Help &amp; Examples</h1>
+    <p class="mt-4 text-gray-700">
+      Quick pointers for working with self-signed certificates while we build the interactive tools.
+    </p>
+  </header>
+
+  <article>
+    <h2 class="text-2xl font-semibold text-gray-900">What is a self-signed certificate?</h2>
+    <p class="mt-3 text-gray-700">
+      A self-signed certificate is signed by the same entity that creates it rather than a public Certificate Authority.
+      They are great for lab, QA, or demo environments where you just need TLS quickly.
+    </p>
+    <p class="mt-2 text-gray-700">
+      Browsers will warn users because the issuing authority is not trusted by default, but installing the certificate into
+      your local trust store or device keychain removes most prompts.
+    </p>
+  </article>
+
+  <article>
+    <h2 class="text-2xl font-semibold text-gray-900">How to use this with localhost</h2>
+    <p class="mt-3 text-gray-700">
+      Pair the generated certificate/key with your preferred reverse proxy. Below are minimal snippets you can adapt.
+    </p>
+    <div class="mt-4 grid gap-6 md:grid-cols-2">
+      <div>
+        <h3 class="text-lg font-semibold text-gray-800">Nginx</h3>
+        <pre class="mt-2 bg-gray-900 text-gray-100 rounded-lg p-4 text-sm overflow-auto"><code>server {
+    listen 443 ssl;
+    server_name localhost;
+
+    ssl_certificate     /etc/nginx/certs/labca.crt;
+    ssl_certificate_key /etc/nginx/certs/labca.key;
+
+    location / {
+        proxy_pass http://127.0.0.1:8000;
+    }
+}</code></pre>
+      </div>
+      <div>
+        <h3 class="text-lg font-semibold text-gray-800">Apache httpd</h3>
+        <pre class="mt-2 bg-gray-900 text-gray-100 rounded-lg p-4 text-sm overflow-auto"><code>&lt;VirtualHost *:443&gt;
+    ServerName localhost
+
+    SSLCertificateFile      "/etc/apache2/certs/labca.crt"
+    SSLCertificateKeyFile   "/etc/apache2/certs/labca.key"
+
+    ProxyPass        "/" "http://127.0.0.1:8000/"
+    ProxyPassReverse "/" "http://127.0.0.1:8000/"
+&lt;/VirtualHost&gt;</code></pre>
+      </div>
+    </div>
+  </article>
+
+  <article>
+    <h2 class="text-2xl font-semibold text-gray-900">Common presets</h2>
+    <p class="mt-3 text-gray-700">Handy defaults you might reuse once Quick Certificate launches:</p>
+    <ul class="mt-4 list-disc list-inside text-gray-700 space-y-2">
+      <li>Internal services: CN=service.lab.local, SAN entries for service.lab.local and localhost.</li>
+      <li>Browser demos: 4096-bit RSA, 30-day validity, friendly name “Lab Demo CA”.</li>
+      <li>Automation runners: PEM bundles stored with restricted file permissions (600).</li>
+    </ul>
+  </article>
+</section>
+{% endblock %}

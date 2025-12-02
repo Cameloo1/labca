@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+
+{% block title %}Revoke Certificate - {{ certificate.common_name }}{% endblock %}
+
+{% block content %}
+<section class="bg-white shadow rounded-lg p-6 md:p-8 space-y-6 max-w-3xl mx-auto">
+  <header class="space-y-2">
+    <p class="text-sm font-semibold uppercase tracking-wide text-red-600">Certificate revocation</p>
+    <h1 class="text-3xl font-bold text-gray-900">Confirm revocation</h1>
+    <p class="text-gray-700">Once revoked, the certificate will be marked as invalid in LabCA.</p>
+  </header>
+
+  <section class="border border-gray-200 rounded-lg p-5 space-y-2 bg-gray-50">
+    <p><span class="font-medium text-gray-700">Common name:</span> {{ certificate.common_name }}</p>
+    <p><span class="font-medium text-gray-700">Issuer:</span> {{ certificate.ca.name if certificate.ca else "Unknown CA" }}</p>
+    <p><span class="font-medium text-gray-700">Serial:</span> {{ certificate.serial_number }}</p>
+    <p><span class="font-medium text-gray-700">Valid until:</span> {{ certificate.not_after }}</p>
+  </section>
+
+  <form method="post" class="space-y-6">
+    <div>
+      <label for="reason_code" class="block text-sm font-medium text-gray-700">Revocation reason</label>
+      <select id="reason_code" name="reason_code" class="mt-1 w-full rounded-md border-gray-300 focus:border-red-500 focus:ring-red-500">
+        {% for value, label in revocation_reasons %}
+          <option value="{{ value }}">{{ label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <label for="notes" class="block text-sm font-medium text-gray-700">Additional notes (optional)</label>
+      <textarea id="notes" name="notes" rows="4" class="mt-1 w-full rounded-md border-gray-300 focus:border-red-500 focus:ring-red-500" placeholder="Add context for audit logs or operators"></textarea>
+    </div>
+    <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+      <p class="text-sm text-gray-600">This action cannot be undone.</p>
+      <div class="flex flex-wrap gap-3">
+        <a href="/certificates/{{ certificate.id }}" class="inline-flex items-center rounded-md border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50">Cancel</a>
+        <button type="submit" class="inline-flex items-center rounded-md bg-red-600 px-5 py-2 text-sm font-semibold text-white shadow hover:bg-red-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">
+          Revoke certificate
+        </button>
+      </div>
+    </div>
+  </form>
+</section>
+{% endblock %}

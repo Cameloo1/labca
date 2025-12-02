@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+
+{% block title %}CA Details – {{ authority.name }}{% endblock %}
+
+{% block content %}
+<section class="bg-white shadow rounded-lg p-6 md:p-8 space-y-6">
+  <header class="space-y-3">
+    <p class="text-sm font-semibold uppercase tracking-wide text-blue-600">Certificate Authority</p>
+    <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+      <div>
+        <h1 class="text-3xl font-bold text-gray-900">{{ authority.name }}</h1>
+        <p class="text-gray-700">Type: {{ authority.source_type }} · Status: {{ authority.status }}</p>
+      </div>
+      <div class="flex flex-wrap gap-3">
+        <a href="/cas/{{ authority.id }}/download-cert" class="inline-flex items-center rounded-md border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-800 hover:bg-gray-50">
+          Download CA certificate
+        </a>
+        <a href="/cas/{{ authority.id }}/issue" class="inline-flex items-center rounded-md border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-800 hover:bg-gray-50">
+          Issue new certificate
+        </a>
+        <a href="#" class="inline-flex items-center rounded-md border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-800 opacity-50 cursor-not-allowed" title="Coming soon">
+          Generate intermediate CA
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <div class="grid gap-6 md:grid-cols-2">
+    <section class="border border-gray-200 rounded-lg p-5 space-y-2">
+      <h2 class="text-lg font-semibold text-gray-900">Subject</h2>
+      <p><span class="font-medium text-gray-700">CN:</span> {{ authority.subject_json.CN }}</p>
+      {% if authority.subject_json.O %}
+        <p><span class="font-medium text-gray-700">O:</span> {{ authority.subject_json.O }}</p>
+      {% endif %}
+      {% if authority.subject_json.OU %}
+        <p><span class="font-medium text-gray-700">OU:</span> {{ authority.subject_json.OU }}</p>
+      {% endif %}
+      {% if authority.subject_json.C %}
+        <p><span class="font-medium text-gray-700">C:</span> {{ authority.subject_json.C }}</p>
+      {% endif %}
+      <p><span class="font-medium text-gray-700">Serial:</span> {{ authority.serial_number }}</p>
+      <p><span class="font-medium text-gray-700">Validity:</span> {{ authority.not_before }} → {{ authority.not_after }}</p>
+    </section>
+
+    <section class="border border-gray-200 rounded-lg p-5 space-y-2">
+      <h2 class="text-lg font-semibold text-gray-900">Key info</h2>
+      <p><span class="font-medium text-gray-700">Algorithm:</span> {{ authority.key_algorithm }}</p>
+      <p><span class="font-medium text-gray-700">Key size:</span> {{ authority.key_size }}</p>
+      <p><span class="font-medium text-gray-700">Certificates issued:</span> {{ certificates|length }}</p>
+    </section>
+  </div>
+
+  <section class="space-y-3">
+    <div class="flex items-center justify-between">
+      <h2 class="text-lg font-semibold text-gray-900">Issued Certificates</h2>
+      <a href="#" class="text-sm text-gray-500 cursor-not-allowed" title="Coming soon">View issuance history</a>
+    </div>
+    {% if certificates %}
+      <div class="overflow-x-auto border border-gray-200 rounded-lg">
+        <table class="min-w-full divide-y divide-gray-200 text-sm">
+          <thead class="bg-gray-50 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
+            <tr>
+              <th class="px-4 py-3">Common Name</th>
+              <th class="px-4 py-3">Type</th>
+              <th class="px-4 py-3">Status</th>
+              <th class="px-4 py-3">Valid To</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-100 text-gray-800">
+            {% for cert in certificates %}
+              <tr>
+                <td class="px-4 py-3 font-semibold text-gray-900">{{ cert.common_name }}</td>
+                <td class="px-4 py-3">{{ cert.type }}</td>
+                <td class="px-4 py-3">{{ cert.status }}</td>
+                <td class="px-4 py-3">{{ cert.not_after.strftime("%Y-%m-%d") if cert.not_after else "—" }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <p class="text-gray-600">No certificates have been issued by this CA yet.</p>
+    {% endif %}
+  </section>
+
+  <section class="space-y-2">
+    <h2 class="text-lg font-semibold text-gray-900">Certificate PEM</h2>
+    <textarea readonly rows="10" class="w-full rounded-md border-gray-300 font-mono text-sm bg-gray-50">{{ authority.cert_pem }}</textarea>
+  </section>
+
+  <div>
+    <a href="/cas" class="text-sm text-gray-600 hover:text-gray-900">← Back to list</a>
+  </div>
+</section>
+{% endblock %}

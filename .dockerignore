@@ -1,0 +1,10 @@
+.git
+.gitignore
+.venv
+__pycache__
+*.pyc
+.env
+tests
+alembic/versions/__pycache__
+docs/*
+!.gitkeep
