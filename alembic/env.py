@@ -1,20 +1,14 @@
-<<<<<<< HEAD
 import sys
 from pathlib import Path
-=======
->>>>>>> cd39ac5c7b9a44db3007118c8c18de9e2c893f42
 from logging.config import fileConfig
 
 from sqlalchemy import engine_from_config, pool
 from alembic import context
 
-<<<<<<< HEAD
 # Add project root to Python path
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
-=======
->>>>>>> cd39ac5c7b9a44db3007118c8c18de9e2c893f42
 from app.config import get_settings
 from app.models import Base
 
