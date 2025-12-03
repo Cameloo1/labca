@@ -1,0 +1,192 @@
+{% extends "base.html" %}
+
+{% block title %}Issue Certificate – {{ authority.name }}{% endblock %}
+
+{% block content %}
+<section class="bg-white shadow rounded-lg p-6 md:p-8 space-y-6">
+  <header class="space-y-3">
+    <p class="text-sm font-semibold uppercase tracking-wide text-blue-600">Issue certificate</p>
+    <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+      <div>
+        <h1 class="text-3xl font-bold text-gray-900">Issue from {{ authority.name }}</h1>
+        <p class="text-gray-700">Issuer valid until {{ authority.not_after.strftime("%Y-%m-%d") if authority.not_after else "unknown" }}</p>
+      </div>
+      <a href="/cas/{{ authority.id }}" class="text-sm text-gray-600 hover:text-gray-900">← Back to CA</a>
+    </div>
+  </header>
+
+  <section class="border border-gray-200 rounded-lg p-5 space-y-2 bg-gray-50">
+    <h2 class="text-lg font-semibold text-gray-900">Issuer</h2>
+    <p><span class="font-medium text-gray-700">Subject CN:</span> {{ authority.subject_cn }}</p>
+    <p><span class="font-medium text-gray-700">Key:</span> {{ authority.key_algorithm }} {{ authority.key_size }}</p>
+    <p><span class="font-medium text-gray-700">Validity:</span> {{ authority.not_before }} → {{ authority.not_after }}</p>
+  </section>
+
+  {% if profiles %}
+    <section class="border border-gray-200 rounded-lg p-5 space-y-3">
+      <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+        <div>
+          <h3 class="text-lg font-semibold text-gray-900">Apply profile</h3>
+          <p class="text-sm text-gray-600">Load defaults from a saved template.</p>
+        </div>
+        <form method="get" class="flex flex-col gap-3 md:flex-row md:items-center">
+          <select name="profile_id" class="rounded-md border-gray-300 focus:border-blue-500 focus:ring-blue-500">
+            <option value="">Manual</option>
+            {% for profile in profiles %}
+              <option value="{{ profile.id }}" {% if active_profile and active_profile.id == profile.id %}selected{% endif %}>{{ profile.name }}</option>
+            {% endfor %}
+          </select>
+          <button type="submit" class="inline-flex items-center rounded-md border border-gray-300 px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50">
+            Apply
+          </button>
+          {% if active_profile %}
+            <a href="?profile_id=" class="text-sm text-gray-500 hover:text-gray-700">Clear</a>
+          {% endif %}
+        </form>
+      </div>
+      {% if active_profile %}
+        <div class="rounded-md border border-blue-100 bg-blue-50 p-4 text-sm text-blue-900">
+          <p class="font-semibold">{{ active_profile.name }}</p>
+          <p>{{ active_profile.description or "No description" }}</p>
+        </div>
+      {% endif %}
+    </section>
+  {% endif %}
+
+  {% if errors %}
+    <div class="rounded-md border border-red-200 bg-red-50 p-3 text-red-900">
+      <p class="font-semibold">Please resolve the following:</p>
+      <ul class="list-disc list-inside">
+        {% for error in errors %}
+          <li>{{ error }}</li>
+        {% endfor %}
+      </ul>
+    </div>
+  {% endif %}
+
+  <form method="post" class="space-y-6">
+    {% if active_profile %}
+      <input type="hidden" name="profile_id" value="{{ active_profile.id }}">
+    {% endif %}
+    <section class="space-y-4">
+      <h2 class="text-xl font-semibold text-gray-900">Subject &amp; Identity</h2>
+      <div class="grid gap-4 md:grid-cols-2">
+        <div>
+          <label class="block text-sm font-medium text-gray-700" for="common_name">Common Name (CN)</label>
+          <input type="text" id="common_name" name="common_name" value="{{ form_values.common_name }}" required class="mt-1 w-full rounded-md border-gray-300 focus:border-blue-500 focus:ring-blue-500" />
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700" for="organization">Organization (O)</label>
+          <input type="text" id="organization" name="organization" value="{{ form_values.organization }}" class="mt-1 w-full rounded-md border-gray-300 focus:border-blue-500 focus:ring-blue-500" />
+        </div>
+      </div>
+      <div class="grid gap-4 md:grid-cols-3">
+        <div>
+          <label class="block text-sm font-medium text-gray-700" for="organizational_unit">Org Unit (OU)</label>
+          <input type="text" id="organizational_unit" name="organizational_unit" value="{{ form_values.organizational_unit }}" class="mt-1 w-full rounded-md border-gray-300 focus:border-blue-500 focus:ring-blue-500" />
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700" for="state">State (ST)</label>
+          <input type="text" id="state" name="state" value="{{ form_values.state }}" class="mt-1 w-full rounded-md border-gray-300 focus:border-blue-500 focus:ring-blue-500" />
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700" for="country">Country (C)</label>
+          <input type="text" id="country" name="country" maxlength="2" value="{{ form_values.country }}" class="mt-1 w-full rounded-md border-gray-300 focus:border-blue-500 focus:ring-blue-500" />
+        </div>
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700" for="dns_sans">DNS SANs</label>
+        <input type="text" id="dns_sans" name="dns_sans" value="{{ form_values.dns_sans }}" class="mt-1 w-full rounded-md border-gray-300 focus:border-blue-500 focus:ring-blue-500" placeholder="service.lab, api.lab" />
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700" for="ip_sans">IP SANs</label>
+        <input type="text" id="ip_sans" name="ip_sans" value="{{ form_values.ip_sans }}" class="mt-1 w-full rounded-md border-gray-300 focus:border-blue-500 focus:ring-blue-500" placeholder="127.0.0.1, 10.0.0.5" />
+      </div>
+    </section>
+
+    <section class="space-y-4">
+      <h2 class="text-xl font-semibold text-gray-900">Key &amp; validity</h2>
+      <div class="grid gap-4 md:grid-cols-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700" for="key_algorithm">Algorithm</label>
+          <select id="key_algorithm" name="key_algorithm" class="mt-1 w-full rounded-md border-gray-300 focus:border-blue-500 focus:ring-blue-500">
+            <option value="RSA" {% if form_values.key_algorithm == "RSA" %}selected{% endif %}>RSA</option>
+            <option value="ECDSA" {% if form_values.key_algorithm == "ECDSA" %}selected{% endif %}>ECDSA</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700" for="key_size">RSA key size</label>
+          <select id="key_size" name="key_size" class="mt-1 w-full rounded-md border-gray-300 focus:border-blue-500 focus:ring-blue-500">
+            {% for size in [2048, 3072, 4096] %}
+              <option value="{{ size }}" {% if form_values.key_size|int == size %}selected{% endif %}>{{ size }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700" for="curve">ECDSA curve</label>
+          <select id="curve" name="curve" class="mt-1 w-full rounded-md border-gray-300 focus:border-blue-500 focus:ring-blue-500">
+            {% for curve in ["P-256", "P-384", "P-521"] %}
+              <option value="{{ curve }}" {% if form_values.curve == curve %}selected{% endif %}>{{ curve }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700" for="hash_algorithm">Hash</label>
+          <select id="hash_algorithm" name="hash_algorithm" class="mt-1 w-full rounded-md border-gray-300 focus:border-blue-500 focus:ring-blue-500">
+            {% for algo in ["SHA256", "SHA384", "SHA512"] %}
+              <option value="{{ algo }}" {% if form_values.hash_algorithm == algo %}selected{% endif %}>{{ algo }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+      <div class="grid gap-4 md:grid-cols-2">
+        <div>
+          <label class="block text-sm font-medium text-gray-700" for="validity_days">Validity (days)</label>
+          <input type="number" id="validity_days" name="validity_days" min="1" max="{{ validity_limit }}" value="{{ form_values.validity_days }}" class="mt-1 w-full rounded-md border-gray-300 focus:border-blue-500 focus:ring-blue-500" />
+          <p class="text-xs text-gray-500 mt-1">Issuer expires in {{ validity_limit }} days.</p>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700">Usage preset</label>
+          <select name="usage_preset" class="mt-1 w-full rounded-md border-gray-300 focus:border-blue-500 focus:ring-blue-500">
+            <option value="server_tls" {% if form_values.usage_preset == "server_tls" %}selected{% endif %}>Server TLS</option>
+            <option value="client_tls" {% if form_values.usage_preset == "client_tls" %}selected{% endif %}>Client TLS</option>
+          </select>
+        </div>
+      </div>
+      <label class="flex items-center space-x-2">
+        <input type="checkbox" name="is_ca" value="true" class="rounded border-gray-300 text-blue-600 focus:ring-blue-500" {% if form_values.is_ca == "true" %}checked{% endif %} />
+        <span class="text-sm text-gray-700">Mark as CA / Intermediate certificate</span>
+      </label>
+    </section>
+
+    <section class="space-y-4">
+      <h2 class="text-xl font-semibold text-gray-900">Storage &amp; lifecycle</h2>
+      <label class="flex items-center space-x-2">
+        <input type="checkbox" name="store_in_db" value="true" class="rounded border-gray-300 text-blue-600 focus:ring-blue-500" {% if form_values.store_in_db == "true" %}checked{% endif %} />
+        <span class="text-sm text-gray-700">Store certificate and key material in LabCA</span>
+      </label>
+      <div class="grid gap-4 md:grid-cols-2">
+        <div>
+          <label class="block text-sm font-medium text-gray-700" for="environment_tags">Environment tags</label>
+          <input type="text" id="environment_tags" name="environment_tags" value="{{ form_values.environment_tags }}" class="mt-1 w-full rounded-md border-gray-300 focus:border-blue-500 focus:ring-blue-500" placeholder="dev, staging" />
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700" for="owner">Owner</label>
+          <input type="text" id="owner" name="owner" value="{{ form_values.owner }}" class="mt-1 w-full rounded-md border-gray-300 focus:border-blue-500 focus:ring-blue-500" />
+        </div>
+      </div>
+      <label class="flex items-center space-x-2">
+        <input type="checkbox" name="enable_expiration_reminders" class="rounded border-gray-300 text-blue-600 focus:ring-blue-500" {% if form_values.enable_expiration_reminders %}checked{% endif %} />
+        <span class="text-sm text-gray-700">Enable expiration reminders (coming soon)</span>
+      </label>
+    </section>
+
+    <div class="flex justify-between items-center">
+      <p class="text-sm text-gray-500">Certificates are signed with {{ authority.name }} and stored securely.</p>
+      <button type="submit" class="inline-flex items-center justify-center rounded-md bg-blue-600 px-6 py-3 text-white font-semibold shadow hover:bg-blue-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+        Issue certificate
+      </button>
+    </div>
+  </form>
+</section>
+{% endblock %}

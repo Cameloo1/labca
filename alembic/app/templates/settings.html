@@ -1,0 +1,426 @@
+{% extends "base.html" %}
+
+{% block title %}Settings{% endblock %}
+
+{% block extra_head %}
+<style>
+  :root {
+    --bg-gradient-start: #050816;
+    --bg-gradient-middle: #141b3f;
+    --bg-gradient-end: #2a0f4f;
+    --accent-blue: #3b82f6;
+    --accent-purple: #a855f7;
+    --accent-cyan: #22d3ee;
+    --text-primary: #f9fafb;
+    --text-muted: #9ca3af;
+    --border-glass: rgba(148, 163, 184, 0.45);
+    --card-bg: rgba(15, 23, 42, 0.64);
+    --card-bg-strong: rgba(15, 23, 42, 0.92);
+    --shadow-soft: 0 24px 60px rgba(15, 23, 42, 0.9);
+    --radius-xl: 24px;
+    --radius-2xl: 32px;
+    --radius-full: 999px;
+    --transition-fast: 160ms ease-out;
+    --transition-med: 200ms ease-out;
+  }
+
+  body {
+    background:
+      radial-gradient(circle at top left, rgba(59, 130, 246, 0.28) 0, transparent 60%),
+      radial-gradient(circle at 10% 80%, rgba(236, 72, 153, 0.24) 0, transparent 55%),
+      radial-gradient(circle at 80% 10%, rgba(34, 211, 238, 0.26) 0, transparent 55%),
+      linear-gradient(135deg, var(--bg-gradient-start), var(--bg-gradient-middle), var(--bg-gradient-end));
+    background-attachment: fixed;
+    color: var(--text-primary);
+    min-height: 100vh;
+  }
+
+  .glass-card {
+    border-radius: 0;
+    background: radial-gradient(circle at top left, rgba(30, 30, 30, 0.95) 0, rgba(10, 10, 10, 0.98) 55%);
+    border: 1px solid rgba(60, 60, 60, 0.6);
+    backdrop-filter: blur(22px) saturate(160%);
+    -webkit-backdrop-filter: blur(22px) saturate(160%);
+    box-shadow: 0 18px 50px rgba(0, 0, 0, 0.95);
+    padding: 24px;
+    position: relative;
+    overflow: hidden;
+    margin-top: 24px;
+    width: 100%;
+  }
+
+  .glass-card::before {
+    content: "";
+    position: absolute;
+    inset: -40%;
+    background: radial-gradient(circle at 0 0, rgba(80, 80, 80, 0.12), transparent 60%);
+    opacity: 0.5;
+    pointer-events: none;
+  }
+
+  .glass-inner {
+    position: relative;
+    z-index: 1;
+  }
+
+  .section-label {
+    font-size: 0.70rem;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    color: var(--accent-cyan);
+    margin-bottom: 4px;
+  }
+
+  .section-title {
+    font-size: 1.5rem;
+    margin: 0 0 8px;
+    letter-spacing: -0.02em;
+    color: var(--text-primary);
+    font-weight: 600;
+  }
+
+  .section-summary {
+    font-size: 0.90rem;
+    color: var(--text-muted);
+    margin-bottom: 24px;
+    line-height: 1.6;
+  }
+
+  .subsection-title {
+    font-size: 1.1rem;
+    margin: 0 0 16px;
+    color: var(--text-primary);
+    font-weight: 600;
+  }
+
+  .glass-card label {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--text-primary);
+    margin-bottom: 6px;
+  }
+
+  .glass-card input[type="text"],
+  .glass-card input[type="number"],
+  .glass-card select {
+    width: 100%;
+    padding: 8px 12px;
+    border-radius: 0;
+    border: 1px solid rgba(148, 163, 184, 0.5);
+    background: rgba(15, 23, 42, 0.8);
+    color: var(--text-primary);
+    font-size: 0.85rem;
+    transition: border-color var(--transition-fast), background var(--transition-fast);
+    margin-top: 4px;
+  }
+
+  .glass-card input:focus,
+  .glass-card select:focus {
+    outline: none;
+    border-color: var(--accent-blue);
+    background: rgba(15, 23, 42, 0.95);
+  }
+
+  .glass-card input::placeholder {
+    color: var(--text-muted);
+  }
+
+  .glass-card .help-text {
+    font-size: 0.70rem;
+    color: var(--text-muted);
+    margin-top: 4px;
+  }
+
+  .glass-card input[type="checkbox"],
+  .glass-card input[type="radio"] {
+    width: 18px;
+    height: 18px;
+    margin-right: 12px;
+    margin-top: 2px;
+    accent-color: var(--accent-blue);
+    cursor: pointer;
+  }
+
+  .checkbox-label,
+  .radio-label {
+    display: flex;
+    align-items: flex-start;
+    padding: 12px;
+    border-radius: 0;
+    border: 1px solid rgba(148, 163, 184, 0.3);
+    background: rgba(15, 23, 42, 0.6);
+    transition: background var(--transition-fast), border-color var(--transition-fast);
+    cursor: pointer;
+  }
+
+  .checkbox-label:hover,
+  .radio-label:hover {
+    background: rgba(148, 163, 184, 0.1);
+    border-color: rgba(148, 163, 184, 0.5);
+  }
+
+  .checkbox-label input:checked + span,
+  .radio-label input:checked + span {
+    color: var(--text-primary);
+  }
+
+  .checkbox-label span,
+  .radio-label span {
+    flex: 1;
+  }
+
+  .checkbox-label .label-title,
+  .radio-label .label-title {
+    font-weight: 600;
+    color: var(--text-primary);
+    display: block;
+    margin-bottom: 4px;
+  }
+
+  .checkbox-label .label-description,
+  .radio-label .label-description {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    line-height: 1.5;
+  }
+
+  .info-box {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 16px;
+    border-radius: 0;
+    border: 1px solid rgba(148, 163, 184, 0.3);
+    background: rgba(15, 23, 42, 0.6);
+  }
+
+  .info-box-label {
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--text-primary);
+  }
+
+  .info-box-value {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+  }
+
+  .btn-primary {
+    border-radius: 0;
+    padding: 9px 16px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    border: none;
+    outline: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: transform var(--transition-fast), box-shadow var(--transition-fast), background var(--transition-fast), color var(--transition-fast);
+    position: relative;
+    overflow: hidden;
+    white-space: nowrap;
+    text-decoration: none;
+    background: radial-gradient(circle at 0 0, rgba(248, 250, 252, 0.96), rgba(148, 163, 184, 0.6));
+    color: #020617;
+    border: 1px solid rgba(226, 232, 240, 0.9);
+    box-shadow: 0 12px 26px rgba(15, 23, 42, 0.9);
+  }
+
+  .btn-primary:hover {
+    transform: translateY(-1px);
+    filter: brightness(1.03);
+    box-shadow: 0 14px 30px rgba(15, 23, 42, 0.95);
+  }
+  
+  .btn-primary-glow {
+    background: radial-gradient(circle at 0 0, rgba(248, 250, 252, 0.96), rgba(148, 163, 184, 0.6)) !important;
+    color: #020617 !important;
+    border: 1px solid rgba(226, 232, 240, 0.9) !important;
+    box-shadow: 
+      0 12px 26px rgba(15, 23, 42, 0.9),
+      0 0 20px rgba(59, 130, 246, 0.4),
+      0 0 40px rgba(59, 130, 246, 0.2) !important;
+  }
+  
+  .btn-primary-glow:hover {
+    background: radial-gradient(circle at 0 0, rgba(248, 250, 252, 0.96), rgba(148, 163, 184, 0.6)) !important;
+    color: #020617 !important;
+    box-shadow: 
+      0 14px 30px rgba(15, 23, 42, 0.95),
+      0 0 25px rgba(59, 130, 246, 0.5),
+      0 0 50px rgba(59, 130, 246, 0.3) !important;
+  }
+
+  .btn-primary:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  .btn-secondary {
+    border-radius: 999px;
+    padding: 10px 20px;
+    font-size: 0.78rem;
+    border: 1px solid rgba(148, 163, 184, 0.8);
+    background: rgba(15, 23, 42, 0.92);
+    color: #e5e7eb;
+    cursor: pointer;
+    transition: background var(--transition-fast), border-color var(--transition-fast);
+  }
+
+  .btn-secondary:hover:not(:disabled) {
+    background: rgba(15, 23, 42, 1);
+    border-color: rgba(209, 213, 219, 0.9);
+  }
+
+  .btn-secondary:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .side-by-side-sections {
+    display: grid;
+    gap: 24px;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  @media (max-width: 768px) {
+    .glass-card {
+      padding: 18px;
+    }
+    .side-by-side-sections {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  /* Override base template max-width for settings page */
+  main {
+    max-width: 90rem !important;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="glass-card">
+  <div class="glass-inner">
+    <div class="section-label">Administration</div>
+    <h1 class="section-title">LabCA Settings</h1>
+    <p class="section-summary">Configure default issuance values and platform security controls.</p>
+
+    <form method="post" style="display: flex; flex-direction: column; gap: 32px;">
+      <div class="side-by-side-sections">
+        <section style="display: flex; flex-direction: column; gap: 16px;">
+          <h2 class="subsection-title">General</h2>
+          <div style="display: flex; flex-direction: column; gap: 20px;">
+            <div>
+              <label for="app_name">App name</label>
+              <input type="text" id="app_name" name="app_name" value="{{ settings.app_name or '' }}" placeholder="LabCA" />
+              <p class="help-text">Shown in navigation and titles.</p>
+            </div>
+            <div>
+              <label for="default_validity_days">Default validity (days)</label>
+              <input type="number" id="default_validity_days" name="default_validity_days" min="1" value="{{ settings.default_validity_days }}" />
+            </div>
+            <div>
+              <label for="default_key_algorithm">Default key algorithm</label>
+              <select id="default_key_algorithm" name="default_key_algorithm">
+                <option value="RSA" {% if settings.default_key_algorithm == "RSA" %}selected{% endif %}>RSA</option>
+                <option value="ECDSA" {% if settings.default_key_algorithm == "ECDSA" %}selected{% endif %}>ECDSA</option>
+              </select>
+            </div>
+            <div>
+              <label for="default_key_size">Default key size</label>
+              <select id="default_key_size" name="default_key_size">
+                {% for size in [2048, 3072, 4096] %}
+                  <option value="{{ size }}" {% if settings.default_key_size == size %}selected{% endif %}>{{ size }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div>
+              <label for="max_leaf_validity_days">Max leaf validity (days)</label>
+              <input type="number" id="max_leaf_validity_days" name="max_leaf_validity_days" min="1" value="{{ settings.max_leaf_validity_days }}" />
+            </div>
+          </div>
+        </section>
+
+        <section style="display: flex; flex-direction: column; gap: 16px;">
+          <h2 class="subsection-title">Key download policy</h2>
+          <div style="display: flex; flex-direction: column; gap: 12px;">
+            {% for option in policy_options %}
+              <label class="radio-label">
+                <input type="radio" name="allow_key_download_policy" value="{{ option.value }}" {% if settings.allow_key_download_policy == option %}checked{% endif %} />
+                <span>
+                  <span class="label-title">{{ option.value.replace("_", " ").title() }}</span>
+                  <span class="label-description">
+                    {% if option.value == "ALL" %}
+                      Allow all certificate private key downloads.
+                    {% elif option.value == "LEAF_ONLY" %}
+                      Restrict to leaf certificates.
+                    {% elif option.value == "CA_DISABLED" %}
+                      Block CA key downloads.
+                    {% else %}
+                      Disable every private key download.
+                    {% endif %}
+                  </span>
+                </span>
+              </label>
+            {% endfor %}
+          </div>
+        </section>
+      </div>
+
+      <div class="side-by-side-sections">
+        <section style="display: flex; flex-direction: column; gap: 16px;">
+          <h2 class="subsection-title">Security</h2>
+          <div style="display: flex; flex-direction: column; gap: 16px;">
+            <label class="checkbox-label">
+              <input type="checkbox" name="require_login" value="true" {% if settings.require_login %}checked{% endif %} />
+              <span>
+                <span class="label-title">Require login</span>
+                <span class="label-description">Reserve console access for authenticated users (future integration).</span>
+              </span>
+            </label>
+            <label class="checkbox-label">
+              <input type="checkbox" name="allow_intermediate_issuance" value="true" {% if settings.allow_intermediate_issuance %}checked{% endif %} />
+              <span>
+                <span class="label-title">Allow intermediate CA issuance</span>
+                <span class="label-description">Enable creation of subordinate CAs from LabCA.</span>
+              </span>
+            </label>
+          </div>
+        </section>
+
+        <section style="display: flex; flex-direction: column; gap: 16px;">
+          <h2 class="subsection-title">Key storage encryption</h2>
+          <div class="info-box" style="flex-direction: column; align-items: flex-start; gap: 16px;">
+            <div>
+              <p class="info-box-label">Status</p>
+              <p class="info-box-value" style="margin-top: 4px;">{{ "Enabled" if settings.key_storage_encryption_enabled else "Disabled" }}</p>
+            </div>
+            <button type="button" class="btn-secondary" disabled title="Coming soon">
+              Rotate KEK
+            </button>
+          </div>
+        </section>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 16px;">
+        <a href="/notifications" class="btn-primary btn-primary-glow" style="justify-content: center;">
+          Notification Settings
+          <svg style="width: 20px; height: 20px;" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+          </svg>
+        </a>
+        <div style="display: flex; justify-content: flex-end;">
+          <button type="submit" class="btn-primary btn-primary-glow">
+            Save settings
+          </button>
+        </div>
+      </div>
+    </form>
+  </div>
+</section>
+{% endblock %}
+

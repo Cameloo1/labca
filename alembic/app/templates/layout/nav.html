@@ -1,0 +1,156 @@
+{% set current_path = request.url.path %}
+{% macro nav_link(href, label, startswith) -%}
+  {% set is_active = current_path.startswith(startswith) %}
+  <a
+    href="{{ href }}"
+    class="nav-link-item {{ 'nav-link-active' if is_active else '' }}"
+  >
+    {{ label }}
+  </a>
+{%- endmacro %}
+
+<style>
+  .nav-container {
+    background: radial-gradient(circle at top left, rgba(30, 30, 30, 0.95) 0, rgba(10, 10, 10, 0.98) 55%);
+    backdrop-filter: blur(26px) saturate(160%);
+    -webkit-backdrop-filter: blur(26px) saturate(160%);
+    border: 1px solid rgba(60, 60, 60, 0.6);
+    box-shadow: 0 18px 50px rgba(0, 0, 0, 0.95);
+    border-radius: 999px;
+    padding: 12px 28px;
+    margin: 16px auto;
+    width: 100%;
+    max-width: none;
+  }
+
+  .nav-inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    flex-wrap: wrap;
+  }
+
+  .nav-logo {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+
+  .logo-mark {
+    width: 32px;
+    height: 32px;
+    border-radius: 40% 60% 48% 52%;
+    background:
+      radial-gradient(circle at 30% 30%, rgba(248, 250, 252, 0.98), rgba(148, 163, 184, 0.4)),
+      radial-gradient(circle at 70% 70%, rgba(56, 189, 248, 0.95), rgba(79, 70, 229, 0.9));
+    box-shadow:
+      0 0 0 1px rgba(148, 163, 184, 0.6),
+      0 12px 25px rgba(15, 23, 42, 0.9);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .logo-mark::after {
+    content: "";
+    position: absolute;
+    inset: 18%;
+    border-radius: inherit;
+    background: radial-gradient(circle at 0 0, rgba(248, 250, 252, 0.9), transparent 55%);
+    opacity: 0.6;
+  }
+
+  .logo-text {
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    font-size: 0.95rem;
+    color: #f9fafb;
+    text-decoration: none;
+    transition: color 160ms ease-out;
+  }
+
+  .logo-text:hover {
+    color: #22d3ee;
+  }
+
+  .nav-links {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    font-size: 0.85rem;
+    flex-wrap: wrap;
+  }
+
+  .nav-link-item {
+    position: relative;
+    padding: 6px 0;
+    cursor: pointer;
+    color: #9ca3af;
+    text-decoration: none;
+    transition: color 160ms ease-out;
+    font-weight: 500;
+  }
+
+  .nav-link-item::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    bottom: -3px;
+    width: 0;
+    height: 2px;
+    border-radius: 999px;
+    background: linear-gradient(90deg, #3b82f6, #a855f7);
+    transition: width 200ms ease-out;
+  }
+
+  .nav-link-item:hover {
+    color: #e5e7eb;
+  }
+
+  .nav-link-item:hover::after {
+    width: 100%;
+  }
+
+  .nav-link-active {
+    color: #f9fafb;
+    font-weight: 600;
+  }
+
+  .nav-link-active::after {
+    width: 100%;
+  }
+
+  @media (max-width: 640px) {
+    .nav-container {
+      border-radius: 18px;
+      margin: 12px 16px;
+    }
+
+    .nav-inner {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 12px;
+    }
+
+    .nav-links {
+      width: 100%;
+      justify-content: space-between;
+    }
+  }
+</style>
+
+<nav class="nav-container" aria-label="Primary">
+  <div class="nav-inner">
+    <a href="/" class="nav-logo" aria-label="LabCA home">
+      <div class="logo-mark"></div>
+      <span class="logo-text">LabCA</span>
+    </a>
+    <div class="nav-links">
+      {{ nav_link('/api', 'API & Tokens', '/api') }}
+      {{ nav_link('/help', 'Help & Examples', '/help') }}
+      {{ nav_link('/certificates', 'Issued Certificates', '/certificates') }}
+      {{ nav_link('/audit', 'Audit Log', '/audit') }}
+      {{ nav_link('/settings', 'Settings', '/settings') }}
+    </div>
+  </div>
+</nav>

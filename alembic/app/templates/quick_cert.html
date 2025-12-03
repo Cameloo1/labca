@@ -1,0 +1,677 @@
+{% extends "base.html" %}
+
+{% block title %}Quick Certificate – {{ "Simple" if current_mode == "simple" else "Advanced" }} Mode{% endblock %}
+
+{% block extra_head %}
+<style>
+  :root {
+    --bg-gradient-start: #050816;
+    --bg-gradient-middle: #141b3f;
+    --bg-gradient-end: #2a0f4f;
+    --accent-blue: #3b82f6;
+    --accent-purple: #a855f7;
+    --accent-cyan: #22d3ee;
+    --text-primary: #f9fafb;
+    --text-muted: #9ca3af;
+    --border-glass: rgba(148, 163, 184, 0.45);
+    --card-bg: rgba(15, 23, 42, 0.64);
+    --card-bg-strong: rgba(15, 23, 42, 0.92);
+    --shadow-soft: 0 24px 60px rgba(15, 23, 42, 0.9);
+    --radius-xl: 24px;
+    --radius-2xl: 32px;
+    --radius-full: 999px;
+    --transition-fast: 160ms ease-out;
+    --transition-med: 200ms ease-out;
+  }
+
+  body {
+    background:
+      radial-gradient(circle at top left, rgba(59, 130, 246, 0.28) 0, transparent 60%),
+      radial-gradient(circle at 10% 80%, rgba(236, 72, 153, 0.24) 0, transparent 55%),
+      radial-gradient(circle at 80% 10%, rgba(34, 211, 238, 0.26) 0, transparent 55%),
+      linear-gradient(135deg, var(--bg-gradient-start), var(--bg-gradient-middle), var(--bg-gradient-end));
+    background-attachment: fixed;
+    color: var(--text-primary);
+    min-height: 100vh;
+  }
+
+  .glass-card {
+    border-radius: var(--radius-xl);
+    background: var(--card-bg-strong);
+    border: 1px solid var(--border-glass);
+    backdrop-filter: blur(22px) saturate(160%);
+    -webkit-backdrop-filter: blur(22px) saturate(160%);
+    box-shadow: var(--shadow-soft);
+    padding: 24px;
+    position: relative;
+    overflow: hidden;
+    margin-bottom: 24px;
+  }
+
+  .glass-card::before {
+    content: "";
+    position: absolute;
+    inset: -40%;
+    background: radial-gradient(circle at 0 0, rgba(148, 163, 184, 0.16), transparent 60%);
+    opacity: 0.7;
+    pointer-events: none;
+  }
+
+  .glass-inner {
+    position: relative;
+    z-index: 1;
+  }
+
+  .section-label {
+    font-size: 0.70rem;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    color: var(--accent-cyan);
+    margin-bottom: 8px;
+  }
+
+  .section-title {
+    font-size: 1.5rem;
+    margin: 0 0 8px;
+    letter-spacing: -0.02em;
+    color: var(--text-primary);
+    font-weight: 600;
+  }
+
+  .section-summary {
+    font-size: 0.90rem;
+    color: var(--text-muted);
+    line-height: 1.6;
+    margin-bottom: 20px;
+  }
+
+  /* Tabs */
+  .tab-list {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+  }
+
+  .tab {
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-decoration: none;
+    transition: all var(--transition-fast);
+    border: 1px solid transparent;
+  }
+
+  .tab.active {
+    background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+    color: #f9fafb;
+    box-shadow: 0 0 0 1px rgba(191, 219, 254, 0.5), 0 8px 16px rgba(37, 99, 235, 0.3);
+  }
+
+  .tab:not(.active) {
+    background: rgba(15, 23, 42, 0.8);
+    color: var(--text-muted);
+    border-color: rgba(148, 163, 184, 0.5);
+  }
+
+  .tab:not(.active):hover {
+    background: rgba(15, 23, 42, 0.95);
+    color: var(--text-primary);
+    border-color: rgba(148, 163, 184, 0.7);
+  }
+
+  /* Form sections */
+  .form-section {
+    padding: 20px;
+    border: 1px solid rgba(148, 163, 184, 0.3);
+    border-radius: 16px;
+    background: rgba(15, 23, 42, 0.6);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+  }
+
+  .form-section h2 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 16px;
+  }
+
+  /* Form inputs */
+  label {
+    display: block;
+    font-size: 0.80rem;
+    font-weight: 500;
+    color: var(--text-primary);
+    margin-bottom: 6px;
+  }
+
+  input[type="text"],
+  input[type="number"],
+  input[type="password"],
+  select,
+  textarea {
+    width: 100%;
+    padding: 8px 12px;
+    border-radius: 8px;
+    border: 1px solid rgba(148, 163, 184, 0.5);
+    background: rgba(15, 23, 42, 0.8);
+    color: var(--text-primary);
+    font-size: 0.85rem;
+    transition: border-color var(--transition-fast), background var(--transition-fast);
+  }
+
+  input[type="text"]:focus,
+  input[type="number"]:focus,
+  input[type="password"]:focus,
+  select:focus,
+  textarea:focus {
+    outline: none;
+    border-color: var(--accent-blue);
+    background: rgba(15, 23, 42, 0.95);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  }
+
+  input::placeholder,
+  textarea::placeholder {
+    color: var(--text-muted);
+  }
+
+  /* Checkboxes and radios */
+  input[type="checkbox"],
+  input[type="radio"] {
+    width: 18px;
+    height: 18px;
+    accent-color: var(--accent-blue);
+    cursor: pointer;
+  }
+
+  .checkbox-label,
+  .radio-label {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    cursor: pointer;
+  }
+
+  .checkbox-label span,
+  .radio-label span {
+    flex: 1;
+  }
+
+  .checkbox-label .label-text {
+    font-weight: 500;
+    color: var(--text-primary);
+    font-size: 0.85rem;
+  }
+
+  .checkbox-label .label-hint {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    margin-top: 2px;
+  }
+
+  /* Error messages */
+  .error-box {
+    border-radius: 12px;
+    border: 1px solid rgba(239, 68, 68, 0.5);
+    background: rgba(239, 68, 68, 0.1);
+    padding: 16px;
+    margin-bottom: 24px;
+    color: #fca5a5;
+  }
+
+  .error-box .error-title {
+    font-weight: 600;
+    margin-bottom: 8px;
+    color: #fca5a5;
+  }
+
+  .error-box ul {
+    list-style: disc;
+    padding-left: 20px;
+    margin: 0;
+  }
+
+  .error-box li {
+    margin: 4px 0;
+    font-size: 0.85rem;
+  }
+
+  /* Help text */
+  .help-text {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    margin-top: 4px;
+  }
+
+  /* Buttons */
+  .btn-primary {
+    border-radius: 999px;
+    padding: 12px 24px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    border: none;
+    outline: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+    background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+    color: #f9fafb;
+    box-shadow: 0 0 0 1px rgba(191, 219, 254, 0.5), 0 18px 34px rgba(37, 99, 235, 0.56);
+  }
+
+  .btn-primary:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 0 0 1px rgba(191, 219, 254, 0.75), 0 22px 42px rgba(37, 99, 235, 0.8);
+  }
+
+  /* Sticky footer */
+  .sticky-footer {
+    position: sticky;
+    bottom: 0;
+    background: var(--card-bg-strong);
+    border-top: 1px solid var(--border-glass);
+    padding: 16px 24px;
+    margin: 24px -24px -24px;
+    backdrop-filter: blur(22px) saturate(160%);
+    -webkit-backdrop-filter: blur(22px) saturate(160%);
+    border-radius: 0 0 var(--radius-xl) var(--radius-xl);
+  }
+
+  .sticky-footer p {
+    font-size: 0.80rem;
+    color: var(--text-muted);
+    margin: 0;
+  }
+
+  /* Grid layouts */
+  .grid-2 {
+    display: grid;
+    gap: 24px;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  }
+
+  .grid-3 {
+    display: grid;
+    gap: 16px;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  }
+
+  @media (max-width: 768px) {
+    .grid-2,
+    .grid-3 {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="glass-card">
+  <div class="glass-inner">
+    <div class="section-label">Quick Certificate</div>
+    <h1 class="section-title">
+      {% if current_mode == "simple" %}
+        Generate a self-signed certificate
+      {% else %}
+        Advanced mode – full X.509 control
+      {% endif %}
+    </h1>
+    <p class="section-summary">
+      {% if current_mode == "simple" %}
+        Simple mode creates a single self-signed certificate and private key tailored for lab and localhost scenarios.
+      {% else %}
+        Advanced mode exposes CA flags, Key Usage, EKU, CRL, OCSP, and custom extensions so you can model real PKI flows without leaving the browser.
+      {% endif %}
+    </p>
+
+    <div class="tab-list" role="tablist">
+      <a href="/quick-cert?mode=simple" role="tab" aria-selected="{{ 'true' if current_mode == 'simple' else 'false' }}" class="tab {% if current_mode == 'simple' %}active{% endif %}">
+        Simple
+      </a>
+      <a href="/quick-cert?mode=advanced" role="tab" aria-selected="{{ 'true' if current_mode == 'advanced' else 'false' }}" class="tab {% if current_mode == 'advanced' %}active{% endif %}">
+        Advanced
+      </a>
+    </div>
+
+    {% if form_errors %}
+      <div class="error-box">
+        <p class="error-title">Please fix the following:</p>
+        <ul>
+          {% for error in form_errors %}
+            <li>{{ error }}</li>
+          {% endfor %}
+        </ul>
+      </div>
+    {% endif %}
+
+    <form method="post" style="display: flex; flex-direction: column; gap: 24px;">
+      <input type="hidden" name="mode" value="{{ current_mode }}" />
+
+      <div class="grid-2">
+        <div class="form-section">
+          <h2>Subject &amp; identity</h2>
+          <div style="display: flex; flex-direction: column; gap: 16px;">
+            <div>
+              <label for="common_name">Common Name (CN) *</label>
+              <input type="text" id="common_name" name="common_name" required value="{{ form_values.common_name }}" placeholder="example.local" />
+            </div>
+            <div>
+              <label for="organization">Organization (O)</label>
+              <input type="text" id="organization" name="organization" value="{{ form_values.organization }}" />
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+              <div>
+                <label for="organizational_unit">Organizational Unit (OU)</label>
+                <input type="text" id="organizational_unit" name="organizational_unit" value="{{ form_values.organizational_unit }}" />
+              </div>
+              <div>
+                <label for="locality">Locality / City (L)</label>
+                <input type="text" id="locality" name="locality" value="{{ form_values.locality }}" />
+              </div>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+              <div>
+                <label for="state">State / Province (ST)</label>
+                <input type="text" id="state" name="state" value="{{ form_values.state }}" />
+              </div>
+              <div>
+                <label for="country">Country (C)</label>
+                <input type="text" id="country" name="country" maxlength="2" value="{{ form_values.country }}" placeholder="US" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-section">
+          <h2>Subject Alternative Names</h2>
+          <div style="display: flex; flex-direction: column; gap: 16px;">
+            <div>
+              <label for="dns_sans">DNS SANs</label>
+              <input type="text" id="dns_sans" name="dns_sans" value="{{ form_values.dns_sans }}" placeholder="example.local, www.example.local" />
+              <p class="help-text">Comma separated hostnames.</p>
+            </div>
+            <div>
+              <label for="ip_sans">IP SANs</label>
+              <input type="text" id="ip_sans" name="ip_sans" value="{{ form_values.ip_sans }}" placeholder="127.0.0.1, 192.168.1.50" />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-section">
+        <h2>Key settings</h2>
+        <div class="grid-3">
+          <div>
+            <label for="key_algorithm">Algorithm</label>
+            <select id="key_algorithm" name="key_algorithm">
+              <option value="RSA" {% if form_values.key_algorithm == "RSA" %}selected{% endif %}>RSA</option>
+              <option value="ECDSA" {% if form_values.key_algorithm == "ECDSA" %}selected{% endif %}>ECDSA</option>
+            </select>
+          </div>
+          <div>
+            <label for="key_size">RSA key size</label>
+            <select id="key_size" name="key_size">
+              <option value="2048" {% if form_values.key_size == 2048 %}selected{% endif %}>2048</option>
+              <option value="3072" {% if form_values.key_size == 3072 %}selected{% endif %}>3072</option>
+              <option value="4096" {% if form_values.key_size == 4096 %}selected{% endif %}>4096</option>
+            </select>
+            <p class="help-text">Used when RSA is selected.</p>
+          </div>
+          <div>
+            <label for="curve">ECDSA curve</label>
+            <select id="curve" name="curve">
+              <option value="P-256" {% if form_values.curve == "P-256" %}selected{% endif %}>P-256</option>
+              <option value="P-384" {% if form_values.curve == "P-384" %}selected{% endif %}>P-384</option>
+              <option value="P-521" {% if form_values.curve == "P-521" %}selected{% endif %}>P-521</option>
+            </select>
+          </div>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 16px;">
+          <div>
+            <label for="hash_algorithm">Hash algorithm</label>
+            <select id="hash_algorithm" name="hash_algorithm">
+              <option value="SHA256" {% if form_values.hash_algorithm == "SHA256" %}selected{% endif %}>SHA-256</option>
+              <option value="SHA384" {% if form_values.hash_algorithm == "SHA384" %}selected{% endif %}>SHA-384</option>
+              <option value="SHA512" {% if form_values.hash_algorithm == "SHA512" %}selected{% endif %}>SHA-512</option>
+            </select>
+          </div>
+          <div>
+            <label for="validity_days">Validity (days)</label>
+            <input type="number" id="validity_days" name="validity_days" min="{{ validity_min }}" max="{{ validity_max }}" value="{{ form_values.validity_days }}" />
+          </div>
+        </div>
+      </div>
+
+      {% if current_mode == "simple" %}
+        <div class="form-section">
+          <h2>Usage preset</h2>
+          <div>
+            <label for="usage_preset">Preset</label>
+            <select id="usage_preset" name="usage_preset">
+              <option value="server_tls" {% if form_values.usage_preset == "server_tls" %}selected{% endif %}>Server TLS</option>
+              <option value="client_tls" {% if form_values.usage_preset == "client_tls" %}selected{% endif %}>Client TLS</option>
+            </select>
+          </div>
+        </div>
+      {% endif %}
+
+      {% if current_mode == "advanced" %}
+        <div class="form-section">
+          <h2>Basic constraints</h2>
+          <div style="display: flex; flex-direction: column; gap: 16px;">
+            <label class="checkbox-label">
+              <input type="checkbox" name="is_ca" value="true" {% if form_values.is_ca %}checked{% endif %} />
+              <span>
+                <span class="label-text">Act as a Certificate Authority</span>
+                <p class="label-hint">Enables CA=true with optional path length.</p>
+              </span>
+            </label>
+            <div>
+              <label for="path_length">Path length</label>
+              <input type="number" id="path_length" name="path_length" min="0" value="{{ form_values.path_length }}" placeholder="Leave blank for unlimited" />
+            </div>
+          </div>
+        </div>
+
+        <div class="form-section">
+          <h2>Key Usage</h2>
+          <div class="grid-2">
+            {% set key_usage_fields = [
+              ("key_usage_digital_signature", "Digital Signature"),
+              ("key_usage_non_repudiation", "Non-repudiation"),
+              ("key_usage_key_encipherment", "Key Encipherment"),
+              ("key_usage_data_encipherment", "Data Encipherment"),
+              ("key_usage_key_agreement", "Key Agreement"),
+              ("key_usage_key_cert_sign", "Key Cert Sign"),
+              ("key_usage_crl_sign", "CRL Sign"),
+              ("key_usage_encipher_only", "Encipher Only"),
+              ("key_usage_decipher_only", "Decipher Only"),
+            ] %}
+            {% for field, label in key_usage_fields %}
+              <label class="checkbox-label">
+                <input type="checkbox" name="{{ field }}" value="true" {% if form_values[field] %}checked{% endif %} />
+                <span class="label-text">{{ label }}</span>
+              </label>
+            {% endfor %}
+          </div>
+        </div>
+
+        <div class="form-section">
+          <h2>Extended Key Usage</h2>
+          <div style="display: flex; flex-direction: column; gap: 16px;">
+            <div class="grid-2">
+              {% set eku_fields = [
+                ("eku_server_auth", "Server Authentication"),
+                ("eku_client_auth", "Client Authentication"),
+                ("eku_code_signing", "Code Signing"),
+                ("eku_email_protection", "Email Protection"),
+                ("eku_time_stamping", "Time Stamping"),
+                ("eku_ocsp_signing", "OCSP Signing"),
+              ] %}
+              {% for field, label in eku_fields %}
+                <label class="checkbox-label">
+                  <input type="checkbox" name="{{ field }}" value="true" {% if form_values[field] %}checked{% endif %} />
+                  <span class="label-text">{{ label }}</span>
+                </label>
+              {% endfor %}
+            </div>
+            <div>
+              <label for="eku_custom_oids">Custom EKU OIDs</label>
+              <input type="text" id="eku_custom_oids" name="eku_custom_oids" value="{{ form_values.eku_custom_oids }}" placeholder="1.3.6.1.5.5.7.3.1" />
+              <p class="help-text">Comma separated dotted identifiers.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-section">
+          <h2>Advanced extensions</h2>
+          <div style="display: flex; flex-direction: column; gap: 20px;">
+            <div class="grid-2">
+              <div>
+                <p style="font-size: 0.80rem; font-weight: 500; color: var(--text-primary); margin-bottom: 12px;">Subject Key Identifier</p>
+                <div style="display: flex; flex-direction: column; gap: 8px;">
+                  <label class="radio-label">
+                    <input type="radio" name="subject_key_identifier" value="auto" {% if form_values.subject_key_identifier == "auto" %}checked{% endif %} />
+                    <span class="label-text">Auto (recommended)</span>
+                  </label>
+                  <label class="radio-label">
+                    <input type="radio" name="subject_key_identifier" value="omit" {% if form_values.subject_key_identifier == "omit" %}checked{% endif %} />
+                    <span class="label-text">Omit</span>
+                  </label>
+                </div>
+              </div>
+              <div>
+                <p style="font-size: 0.80rem; font-weight: 500; color: var(--text-primary); margin-bottom: 12px;">Authority Key Identifier</p>
+                <div style="display: flex; flex-direction: column; gap: 8px;">
+                  <label class="radio-label">
+                    <input type="radio" name="authority_key_identifier" value="match_subject" {% if form_values.authority_key_identifier == "match_subject" %}checked{% endif %} />
+                    <span class="label-text">Match subject (self-signed)</span>
+                  </label>
+                  <label class="radio-label">
+                    <input type="radio" name="authority_key_identifier" value="omit" {% if form_values.authority_key_identifier == "omit" %}checked{% endif %} />
+                    <span class="label-text">Omit</span>
+                  </label>
+                </div>
+              </div>
+            </div>
+            <div class="grid-2">
+              <div>
+                <label for="crl_distribution_points">CRL distribution URLs</label>
+                <textarea id="crl_distribution_points" name="crl_distribution_points" rows="3" placeholder="https://pki.example.local/crl.pem">{{ form_values.crl_distribution_points }}</textarea>
+                <p class="help-text">One per line.</p>
+              </div>
+              <div>
+                <label for="ocsp_urls">OCSP responder URLs</label>
+                <textarea id="ocsp_urls" name="ocsp_urls" rows="3" placeholder="https://pki.example.local/ocsp">{{ form_values.ocsp_urls }}</textarea>
+              </div>
+            </div>
+            <div>
+              <p style="font-size: 0.80rem; font-weight: 500; color: var(--text-primary); margin-bottom: 12px;">Custom extensions</p>
+              <div style="display: flex; flex-direction: column; gap: 16px;">
+                {% for idx in range(custom_extension_slots) %}
+                  {% set entry = form_values.custom_extensions[idx] %}
+                  <div class="form-section" style="padding: 16px;">
+                    <div style="display: grid; grid-template-columns: 1fr auto; gap: 16px; margin-bottom: 12px;">
+                      <div>
+                        <label for="custom_extensions-{{ idx }}-oid">OID</label>
+                        <input type="text" id="custom_extensions-{{ idx }}-oid" name="custom_extensions-{{ idx }}-oid" value="{{ entry.oid }}" placeholder="1.3.6.1.4.1..." />
+                      </div>
+                      <label class="checkbox-label" style="align-items: center; margin-top: 24px;">
+                        <input type="checkbox" name="custom_extensions-{{ idx }}-critical" value="true" {% if entry.critical %}checked{% endif %} />
+                        <span class="label-text">Critical</span>
+                      </label>
+                    </div>
+                    <div>
+                      <label for="custom_extensions-{{ idx }}-value">Value</label>
+                      <textarea id="custom_extensions-{{ idx }}-value" name="custom_extensions-{{ idx }}-value" rows="3" placeholder="Binary data is supported via UTF-8 text">{{ entry.value }}</textarea>
+                    </div>
+                  </div>
+                {% endfor %}
+              </div>
+            </div>
+          </div>
+        </div>
+      {% endif %}
+
+      <div class="form-section">
+        <h2>Output &amp; download</h2>
+        <div class="grid-2">
+          <label class="checkbox-label">
+            <input type="checkbox" name="output_pem_cert" value="true" {% if form_values.output_pem_cert %}checked{% endif %} />
+            <span>
+              <span class="label-text">Certificate (.pem)</span>
+              <p class="label-hint">PEM encoded X.509 certificate.</p>
+            </span>
+          </label>
+          <label class="checkbox-label">
+            <input type="checkbox" name="output_pem_key" value="true" {% if form_values.output_pem_key %}checked{% endif %} />
+            <span>
+              <span class="label-text">Private key (.pem)</span>
+              <p class="label-hint">Unencrypted private key in PEM format.</p>
+            </span>
+          </label>
+          <label class="checkbox-label">
+            <input type="checkbox" name="output_combined_pem" value="true" {% if form_values.output_combined_pem %}checked{% endif %} />
+            <span>
+              <span class="label-text">Combined bundle</span>
+              <p class="label-hint">Certificate and key in a single PEM file.</p>
+            </span>
+          </label>
+          <label class="checkbox-label">
+            <input type="checkbox" name="output_pfx" value="true" {% if form_values.output_pfx %}checked{% endif %} />
+            <span>
+              <span class="label-text">PFX / PKCS#12</span>
+              <p class="label-hint">Requires a password.</p>
+            </span>
+          </label>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 16px;">
+          <div>
+            <label for="pfx_password">PFX password</label>
+            <input type="password" id="pfx_password" name="pfx_password" value="{{ form_values.pfx_password }}" />
+          </div>
+          <div>
+            <label for="pfx_password_confirm">Confirm password</label>
+            <input type="password" id="pfx_password_confirm" name="pfx_password_confirm" value="{{ form_values.pfx_password_confirm }}" />
+          </div>
+        </div>
+        <div style="margin-top: 16px;">
+          <label for="label">Friendly label (optional)</label>
+          <input type="text" id="label" name="label" value="{{ form_values.label }}" placeholder="Lab demo cert" />
+        </div>
+      </div>
+
+      <div class="form-section">
+        <h2>LabCA storage</h2>
+        <label class="checkbox-label">
+          <input type="checkbox" name="store_in_labca" value="true" {% if form_values.store_in_labca %}checked{% endif %} />
+          <span>
+            <span class="label-text">Store this certificate in LabCA</span>
+            <p class="label-hint">Adds it to the Issued Certificates list with the "quick-cert" tag so you can reference or download it later.</p>
+          </span>
+        </label>
+        <p class="help-text" style="margin-top: 8px;">Leave unchecked for fully stateless generation.</p>
+      </div>
+
+      <div class="sticky-footer">
+        <div style="display: flex; flex-direction: column; gap: 16px; align-items: flex-start;">
+          <p>
+            {% if current_mode == "simple" %}
+              Simple mode uses SHA-2, SAN extensions, and recommended key usages for you.
+            {% else %}
+              Advanced mode keeps everything stateless - copy downloads immediately after generation.
+            {% endif %}
+          </p>
+          <button type="submit" class="btn-primary">Generate certificate</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</section>
+{% endblock %}

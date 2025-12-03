@@ -1,0 +1,636 @@
+{% extends "base.html" %}
+
+{% block title %}API Access & Tokens{% endblock %}
+
+{% block extra_head %}
+<style>
+  :root {
+    --bg-gradient-start: #050816;
+    --bg-gradient-middle: #141b3f;
+    --bg-gradient-end: #2a0f4f;
+    --accent-blue: #3b82f6;
+    --accent-purple: #a855f7;
+    --accent-cyan: #22d3ee;
+    --text-primary: #f9fafb;
+    --text-muted: #9ca3af;
+    --border-glass: rgba(148, 163, 184, 0.45);
+    --card-bg: rgba(15, 23, 42, 0.64);
+    --card-bg-strong: rgba(15, 23, 42, 0.92);
+    --shadow-soft: 0 24px 60px rgba(15, 23, 42, 0.9);
+    --radius-xl: 24px;
+    --radius-2xl: 32px;
+    --radius-full: 999px;
+    --transition-fast: 160ms ease-out;
+    --transition-med: 200ms ease-out;
+  }
+
+  body {
+    background:
+      radial-gradient(circle at top left, rgba(59, 130, 246, 0.28) 0, transparent 60%),
+      radial-gradient(circle at 10% 80%, rgba(236, 72, 153, 0.24) 0, transparent 55%),
+      radial-gradient(circle at 80% 10%, rgba(34, 211, 238, 0.26) 0, transparent 55%),
+      linear-gradient(135deg, var(--bg-gradient-start), var(--bg-gradient-middle), var(--bg-gradient-end));
+    background-attachment: fixed;
+    color: var(--text-primary);
+    min-height: 100vh;
+  }
+
+  .glass-card {
+    border-radius: var(--radius-xl);
+    background: radial-gradient(circle at top left, rgba(30, 30, 30, 0.95) 0, rgba(10, 10, 10, 0.98) 55%);
+    border: 1px solid rgba(60, 60, 60, 0.6);
+    backdrop-filter: blur(22px) saturate(160%);
+    -webkit-backdrop-filter: blur(22px) saturate(160%);
+    box-shadow: 0 18px 50px rgba(0, 0, 0, 0.95);
+    padding: 24px;
+    position: relative;
+    overflow: hidden;
+    margin-bottom: 24px;
+  }
+
+  .glass-card::before {
+    content: "";
+    position: absolute;
+    inset: -40%;
+    background: radial-gradient(circle at 0 0, rgba(80, 80, 80, 0.12), transparent 60%);
+    opacity: 0.5;
+    pointer-events: none;
+  }
+
+  .glass-inner {
+    position: relative;
+    z-index: 1;
+  }
+
+  .section-label {
+    font-size: 0.70rem;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    color: var(--accent-cyan);
+    margin-bottom: 4px;
+  }
+
+  .section-header {
+    margin-bottom: 16px;
+  }
+
+  .section-title {
+    font-size: 1.5rem;
+    margin: 0 0 8px;
+    letter-spacing: -0.02em;
+    color: var(--text-primary);
+    font-weight: 600;
+  }
+
+  .section-summary {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    line-height: 1.6;
+  }
+
+  /* Table styling */
+  .glass-card table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+  }
+
+  .glass-card thead {
+    background: rgba(15, 23, 42, 0.95);
+    border-bottom: 1px solid rgba(148, 163, 184, 0.3);
+  }
+
+  .glass-card thead th {
+    padding: 12px 16px;
+    text-align: left;
+    font-size: 0.70rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text-muted);
+    font-weight: 600;
+  }
+
+  .glass-card tbody tr {
+    border-bottom: 1px solid rgba(148, 163, 184, 0.15);
+    transition: background var(--transition-fast);
+  }
+
+  .glass-card tbody tr:hover {
+    background: rgba(148, 163, 184, 0.08);
+  }
+
+  .glass-card tbody td {
+    padding: 12px 16px;
+    color: var(--text-primary);
+  }
+
+  /* Form styling */
+  .glass-card form {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .glass-card label {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--text-primary);
+  }
+
+  .glass-card input[type="text"],
+  .glass-card input[type="password"],
+  .glass-card input[type="datetime-local"],
+  .glass-card select {
+    padding: 10px 12px;
+    border-radius: 8px;
+    border: 1px solid rgba(148, 163, 184, 0.5);
+    background: rgba(15, 23, 42, 0.8);
+    color: var(--text-primary);
+    font-size: 0.85rem;
+    transition: border-color var(--transition-fast), background var(--transition-fast);
+  }
+
+  .glass-card input:focus,
+  .glass-card select:focus {
+    outline: none;
+    border-color: var(--accent-blue);
+    background: rgba(15, 23, 42, 0.95);
+  }
+
+  .glass-card input::placeholder {
+    color: var(--text-muted);
+  }
+
+  .glass-card .form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 16px;
+  }
+
+  .glass-card .checkbox-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    font-size: 0.85rem;
+    color: var(--text-primary);
+  }
+
+  .glass-card .checkbox-group label {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+  }
+
+  .glass-card input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    border-radius: 4px;
+    border: 1px solid rgba(148, 163, 184, 0.5);
+    background: rgba(15, 23, 42, 0.8);
+    cursor: pointer;
+    accent-color: var(--accent-blue);
+  }
+
+  /* Button styling */
+  .btn-primary {
+    border-radius: 0;
+    padding: 9px 16px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    border: none;
+    outline: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: transform var(--transition-fast), box-shadow var(--transition-fast), background var(--transition-fast), color var(--transition-fast);
+    position: relative;
+    overflow: hidden;
+    white-space: nowrap;
+    text-decoration: none;
+    background: radial-gradient(circle at 0 0, rgba(248, 250, 252, 0.96), rgba(148, 163, 184, 0.6));
+    color: #020617;
+    border: 1px solid rgba(226, 232, 240, 0.9);
+    box-shadow: 0 12px 26px rgba(15, 23, 42, 0.9);
+  }
+
+  .btn-primary:hover:not(:disabled) {
+    transform: translateY(-1px);
+    filter: brightness(1.03);
+    box-shadow: 0 14px 30px rgba(15, 23, 42, 0.95);
+  }
+  
+  .btn-primary-glow {
+    background: radial-gradient(circle at 0 0, rgba(248, 250, 252, 0.96), rgba(148, 163, 184, 0.6)) !important;
+    color: #020617 !important;
+    border: 1px solid rgba(226, 232, 240, 0.9) !important;
+    box-shadow: 
+      0 12px 26px rgba(15, 23, 42, 0.9),
+      0 0 20px rgba(59, 130, 246, 0.4),
+      0 0 40px rgba(59, 130, 246, 0.2) !important;
+  }
+  
+  .btn-primary-glow:hover:not(:disabled) {
+    background: radial-gradient(circle at 0 0, rgba(248, 250, 252, 0.96), rgba(148, 163, 184, 0.6)) !important;
+    color: #020617 !important;
+    box-shadow: 
+      0 14px 30px rgba(15, 23, 42, 0.95),
+      0 0 25px rgba(59, 130, 246, 0.5),
+      0 0 50px rgba(59, 130, 246, 0.3) !important;
+  }
+
+  .btn-primary:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  /* Badge styling */
+  .permission-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 0.70rem;
+    font-weight: 600;
+    background: rgba(15, 23, 42, 0.9);
+    border: 1px solid rgba(148, 163, 184, 0.5);
+  }
+
+  .permission-badge.issue {
+    background: rgba(59, 130, 246, 0.2);
+    border-color: rgba(59, 130, 246, 0.5);
+    color: #93c5fd;
+  }
+
+  .permission-badge.read {
+    background: rgba(34, 197, 94, 0.2);
+    border-color: rgba(34, 197, 94, 0.5);
+    color: #86efac;
+  }
+
+  .permission-badge.revoke {
+    background: rgba(239, 68, 68, 0.2);
+    border-color: rgba(239, 68, 68, 0.5);
+    color: #fca5a5;
+  }
+
+  /* Error messages */
+  .error-message {
+    padding: 12px 16px;
+    border-radius: 8px;
+    background: rgba(239, 68, 68, 0.15);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    color: #fca5a5;
+    font-size: 0.85rem;
+    margin-bottom: 16px;
+  }
+
+  /* Success message */
+  .success-message {
+    padding: 16px;
+    border-radius: 8px;
+    border: 1px dashed rgba(59, 130, 246, 0.5);
+    background: rgba(59, 130, 246, 0.1);
+    margin-bottom: 16px;
+  }
+
+  .success-message-title {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--accent-blue);
+    margin-bottom: 8px;
+  }
+
+  .success-message code {
+    display: block;
+    font-family: monospace;
+    font-size: 0.80rem;
+    word-break: break-all;
+    color: var(--text-primary);
+    padding: 8px;
+    background: rgba(15, 23, 42, 0.8);
+    border-radius: 6px;
+    border: 1px solid rgba(148, 163, 184, 0.3);
+  }
+
+  /* Code blocks */
+  .code-block {
+    background: rgba(15, 23, 42, 0.95);
+    border: 1px solid rgba(148, 163, 184, 0.3);
+    border-radius: 12px;
+    padding: 16px;
+    overflow-x: auto;
+    font-family: 'Courier New', monospace;
+    font-size: 0.80rem;
+    color: var(--text-primary);
+    line-height: 1.6;
+  }
+
+  .code-block code {
+    color: #86efac;
+  }
+
+  .code-block .comment {
+    color: var(--text-muted);
+  }
+
+  .code-block .string {
+    color: #fbbf24;
+  }
+
+  .code-block .keyword {
+    color: var(--accent-purple);
+  }
+
+  /* Subsection titles */
+  .subsection-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 20px 0 12px;
+  }
+
+  .subsection-note {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    margin-top: 8px;
+    line-height: 1.5;
+  }
+
+  .subsection-note code {
+    background: rgba(15, 23, 42, 0.8);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 0.70rem;
+    color: var(--accent-cyan);
+  }
+
+  /* Help text */
+  .help-text {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    margin-top: 6px;
+  }
+
+  /* Responsive */
+  @media (max-width: 768px) {
+    .glass-card .form-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="glass-card">
+  <div class="glass-inner">
+    <div class="section-label">API Access</div>
+    <div class="section-header">
+      <h1 class="section-title">API Tokens</h1>
+      <p class="section-summary">
+        Create scoped tokens for automation. Each token exposes its prefix so you can identify usage without revealing
+        the full secret.
+      </p>
+    </div>
+
+    {% if tokens %}
+      <div class="overflow-x-auto">
+        <table>
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Prefix</th>
+              <th>Permissions</th>
+              <th>Expires</th>
+              <th>Last used</th>
+              <th>Created</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for token in tokens %}
+              <tr>
+                <td style="font-weight: 600;">{{ token.name }}</td>
+                <td style="font-family: monospace; font-size: 0.80rem; color: var(--text-muted);">{{ token.token_prefix }}</td>
+                <td>
+                  <div style="display: flex; flex-wrap: wrap; gap: 6px;">
+                    {% if token.permissions.issue %}
+                      <span class="permission-badge issue">issue</span>
+                    {% endif %}
+                    {% if token.permissions.read %}
+                      <span class="permission-badge read">read</span>
+                    {% endif %}
+                    {% if token.permissions.revoke %}
+                      <span class="permission-badge revoke">revoke</span>
+                    {% endif %}
+                    {% if not (token.permissions.issue or token.permissions.read or token.permissions.revoke) %}
+                      <span style="font-size: 0.75rem; color: var(--text-muted);">none</span>
+                    {% endif %}
+                  </div>
+                </td>
+                <td>
+                  {% if token.expires_at %}
+                    {{ token.expires_at.strftime("%Y-%m-%d %H:%M UTC") }}
+                  {% else %}
+                    <span style="color: var(--text-muted);">never</span>
+                  {% endif %}
+                </td>
+                <td>
+                  {% if token.last_used_at %}
+                    {{ token.last_used_at.strftime("%Y-%m-%d %H:%M UTC") }}
+                  {% else %}
+                    <span style="color: var(--text-muted);">never</span>
+                  {% endif %}
+                </td>
+                <td>{{ token.created_at.strftime("%Y-%m-%d %H:%M UTC") }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <p style="font-size: 0.85rem; color: var(--text-muted);">No API tokens exist yet.</p>
+    {% endif %}
+  </div>
+</section>
+
+<section class="glass-card">
+  <div class="glass-inner">
+    <div class="section-label">Token Creation</div>
+    <div class="section-header">
+      <h2 class="section-title">Create a Token</h2>
+      <p class="section-summary">
+        Provide the admin secret (<code style="font-family: monospace; background: rgba(15, 23, 42, 0.8); padding: 2px 6px; border-radius: 4px; font-size: 0.80rem;">API_TOKEN_CREATION_SECRET</code>) to mint a token. The raw
+        value is only shown once after creation.
+      </p>
+    </div>
+
+    {% if form_errors %}
+      <div style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px;">
+        {% for error in form_errors %}
+          <div class="error-message">{{ error }}</div>
+        {% endfor %}
+      </div>
+    {% endif %}
+
+    {% if created_token_value %}
+      <div class="success-message">
+        <p class="success-message-title">New token value</p>
+        <code>{{ created_token_value }}</code>
+      </div>
+    {% endif %}
+
+    <form method="post">
+      <div>
+        <label for="name">Token name</label>
+        <input
+          type="text"
+          id="name"
+          name="name"
+          value="{{ form_values.name }}"
+          required
+        />
+      </div>
+
+      <div>
+        <p style="display: block; font-size: 0.85rem; font-weight: 500; color: var(--text-primary); margin-bottom: 8px;">Permissions</p>
+        <div class="checkbox-group">
+          <label>
+            <input type="checkbox" name="perm_issue" {% if form_values.perm_issue %}checked{% endif %} />
+            Issue certificates
+          </label>
+          <label>
+            <input type="checkbox" name="perm_read" {% if form_values.perm_read %}checked{% endif %} />
+            Read certificates
+          </label>
+          <label>
+            <input type="checkbox" name="perm_revoke" {% if form_values.perm_revoke %}checked{% endif %} />
+            Revoke (future use)
+          </label>
+        </div>
+      </div>
+
+      <div class="form-grid">
+        <div>
+          <label for="expires_at">Expires (UTC)</label>
+          <input
+            type="datetime-local"
+            id="expires_at"
+            name="expires_at"
+            value="{{ form_values.expires_at }}"
+          />
+          <p class="help-text">Leave empty for non-expiring tokens.</p>
+        </div>
+        <div>
+          <label for="admin_secret">Admin secret</label>
+          <input
+            type="password"
+            id="admin_secret"
+            name="admin_secret"
+            required
+          />
+        </div>
+      </div>
+
+      <div>
+        <button
+          type="submit"
+          class="btn-primary btn-primary-glow"
+          {% if not creation_enabled %}disabled{% endif %}
+        >
+          Generate token
+        </button>
+        {% if not creation_enabled %}
+          <p style="margin-top: 12px; font-size: 0.75rem; color: #fca5a5;">Token creation is disabled until API_TOKEN_CREATION_SECRET is configured.</p>
+        {% endif %}
+      </div>
+    </form>
+  </div>
+</section>
+
+<section class="glass-card">
+  <div class="glass-inner">
+    <div class="section-label">Documentation</div>
+    <div class="section-header">
+      <h2 class="section-title">Usage Examples</h2>
+      <p class="section-summary">All API calls need <code style="font-family: monospace; background: rgba(15, 23, 42, 0.8); padding: 2px 6px; border-radius: 4px; font-size: 0.80rem;">Authorization: Bearer &lt;token&gt;</code>.</p>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 24px;">
+      <div>
+        <h3 class="subsection-title">Issue from an existing CA</h3>
+        <pre class="code-block"><code>curl -X POST http://localhost:8000/api/v1/certificates \
+  -H "Authorization: Bearer $LABCA_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "issuer_ca_id": "ca-id-here",
+    "common_name": "service.lab",
+    "dns_sans": ["service.lab"],
+    "key_algorithm": "RSA",
+    "key_size": 2048,
+    "hash_algorithm": "SHA256",
+    "validity_days": 365,
+    "usage_preset": "server_tls",
+    "return_private_key": true,
+    "store_in_db": true
+  }'</code></pre>
+      </div>
+
+      <div>
+        <h3 class="subsection-title">Self-signed certificate (no CA)</h3>
+        <pre class="code-block"><code>curl -X POST http://localhost:8000/api/v1/certificates \
+  -H "Authorization: Bearer $LABCA_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "issuer_ca_id": null,
+    "common_name": "dev.lab",
+    "dns_sans": ["dev.lab", "localhost"],
+    "key_algorithm": "ECDSA",
+    "curve": "P-256",
+    "hash_algorithm": "SHA256",
+    "validity_days": 30,
+    "return_private_key": true
+  }'</code></pre>
+      </div>
+
+      <div>
+        <h3 class="subsection-title">Fetch certificate details</h3>
+        <pre class="code-block"><code>curl -X GET "http://localhost:8000/api/v1/certificates/{certificate_id}?include_private_key=false" \
+  -H "Authorization: Bearer $LABCA_TOKEN"</code></pre>
+        <p class="subsection-note">
+          Set <code>include_private_key=true</code> to retrieve the key when policy allows it. The response always includes
+          <code>certificate_pem</code> plus metadata (owner, validity, status, tags, and whether key downloads are allowed).
+        </p>
+      </div>
+
+      <div>
+        <h3 class="subsection-title">Python quick start</h3>
+        <pre class="code-block"><code class="language-python">import requests
+
+token = "YOUR_TOKEN_HERE"
+resp = requests.post(
+    "http://localhost:8000/api/v1/certificates",
+    headers={"Authorization": f"Bearer {token}"},
+    json={
+        "issuer_ca_id": "ca-id-here",
+        "common_name": "api.lab",
+        "dns_sans": ["api.lab"],
+        "key_algorithm": "RSA",
+        "key_size": 2048,
+        "hash_algorithm": "SHA256",
+        "validity_days": 90,
+        "return_private_key": True,
+    },
+    timeout=10,
+)
+resp.raise_for_status()
+bundle = resp.json()
+print(bundle["certificate_pem"])</code></pre>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}
