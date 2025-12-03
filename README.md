@@ -12,10 +12,17 @@
 LabCA is a FastAPI-based web console that lets you stand up a lightweight certificate authority, issue test certificates, and explore PKI workflows in a self-contained environment. It is designed for lab, demo, and portfolio scenarios rather than hardened production deployments.
 
 ![Home Screen](docs/home.png)
-<div style="display: flex; gap: 10px;">
-  <img src="docs/issue_cert.png" alt="Issue Certificate Screen" width="50%">
-  <img src="docs/quick_cert_simple.png" alt="Quick Certificate Simple" width="50%">
-</div>
+
+<table>
+<tr>
+<td width="50%">
+<img src="docs/issue_cert.png" alt="Issue Certificate Screen" width="100%">
+</td>
+<td width="50%">
+<img src="docs/quick_cert_simple.png" alt="Quick Certificate Simple" width="100%">
+</td>
+</tr>
+</table>
 
 ## Feature highlights
 
