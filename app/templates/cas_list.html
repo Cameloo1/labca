@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+
+{% block title %}Certificate Authorities{% endblock %}
+
+{% block content %}
+<section class="bg-white shadow rounded-lg p-6 md:p-8 space-y-6">
+  <header class="space-y-2">
+    <p class="text-sm font-semibold uppercase tracking-wide text-blue-600">Certificate Authorities</p>
+    <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+      <h1 class="text-3xl font-bold text-gray-900">Available CAs</h1>
+      <a href="/setup" class="inline-flex items-center rounded-md bg-blue-600 px-4 py-2 text-white font-semibold shadow hover:bg-blue-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+        + New CA
+      </a>
+    </div>
+    <p class="text-gray-700">Manage roots and intermediates for this LabCA instance.</p>
+  </header>
+
+  {% if authorities %}
+    <div class="overflow-x-auto">
+      <table class="min-w-full divide-y divide-gray-200 text-sm">
+        <thead class="bg-gray-50 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
+          <tr>
+            <th class="px-4 py-3">Name</th>
+            <th class="px-4 py-3">Type</th>
+            <th class="px-4 py-3">Subject CN</th>
+            <th class="px-4 py-3">Key</th>
+            <th class="px-4 py-3">Valid</th>
+            <th class="px-4 py-3">Status</th>
+            <th class="px-4 py-3">Certificates</th>
+            <th class="px-4 py-3 sr-only">Actions</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100 text-gray-800">
+          {% for ca in authorities %}
+            <tr class="hover:bg-gray-50">
+              <td class="px-4 py-3 font-semibold text-gray-900">
+                {{ ca.name }}
+              </td>
+              <td class="px-4 py-3">{{ ca.source_type }}</td>
+              <td class="px-4 py-3">{{ ca.subject_cn }}</td>
+              <td class="px-4 py-3">{{ ca.key_algorithm }} {{ ca.key_size }}</td>
+              <td class="px-4 py-3">
+                {{ ca.not_before.strftime("%Y-%m-%d") if ca.not_before else "—" }} → {{ ca.not_after.strftime("%Y-%m-%d") if ca.not_after else "—" }}
+              </td>
+              <td class="px-4 py-3">
+                <span class="px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-700">{{ ca.status }}</span>
+              </td>
+              <td class="px-4 py-3">{{ ca.certificates|length }}</td>
+              <td class="px-4 py-3 text-right space-x-3">
+                <a href="/cas/{{ ca.id }}" class="text-blue-600 hover:text-blue-500 font-semibold">Details</a>
+                <a href="/cas/{{ ca.id }}/download-cert" class="text-gray-600 hover:text-gray-800">Download</a>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <div class="border border-dashed border-gray-300 rounded-lg p-6 text-center text-gray-600 space-y-3">
+      <p class="text-lg font-semibold text-gray-900">No Certificate Authorities configured yet.</p>
+      <p>Run the setup wizard to create or import your first CA.</p>
+      <a href="/setup" class="inline-flex items-center rounded-md px-4 py-2 text-sm font-semibold bg-blue-600 text-white hover:bg-blue-700">
+        Launch Setup Wizard
+      </a>
+    </div>
+  {% endif %}
+</section>
+{% endblock %}

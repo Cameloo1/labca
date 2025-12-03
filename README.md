@@ -1,5 +1,6 @@
 # LabCA – Internal Certificate & CA Lab Toolkit
 
+<<<<<<< HEAD
 ![Python](https://img.shields.io/badge/Python-3.11+-blue.svg)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.104+-009688.svg?logo=fastapi)
 ![SQLAlchemy](https://img.shields.io/badge/SQLAlchemy-2.0+-red.svg)
@@ -17,6 +18,11 @@ LabCA is a FastAPI-based web console that lets you stand up a lightweight certif
   <img src="docs/quick_cert_simple.png" alt="Quick Certificate Simple" width="50%">
 </div>
 
+=======
+LabCA is a FastAPI-based web console that lets you stand up a lightweight certificate authority, issue test certificates, and explore PKI workflows in a self-contained environment. It is designed for lab, demo, and portfolio scenarios rather than hardened production deployments.
+
+![Quick Certificate Screen](docs/quick_cert_simple.png)
+>>>>>>> cd39ac5c7b9a44db3007118c8c18de9e2c893f42
 
 ## Feature highlights
 

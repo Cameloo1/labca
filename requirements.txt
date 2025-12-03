@@ -1,9 +1,18 @@
+<<<<<<< HEAD
 fastapi>=0.100.0,<1.0.0
 uvicorn[standard]>=0.20.0
+=======
+fastapi
+uvicorn[standard]
+>>>>>>> cd39ac5c7b9a44db3007118c8c18de9e2c893f42
 jinja2
 sqlalchemy
 alembic
 pydantic>=1.10,<2.0
+<<<<<<< HEAD
+=======
+pydantic-settings
+>>>>>>> cd39ac5c7b9a44db3007118c8c18de9e2c893f42
 python-multipart
 httpx
 pytest
@@ -11,4 +20,7 @@ faker
 cryptography
 playwright
 pytest-playwright
+<<<<<<< HEAD
 pyyaml>=6.0.1
+=======
+>>>>>>> cd39ac5c7b9a44db3007118c8c18de9e2c893f42

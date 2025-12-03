@@ -1,0 +1,354 @@
+{% extends "base.html" %}
+
+{% block title %}Quick Certificate – {{ "Simple" if current_mode == "simple" else "Advanced" }} Mode{% endblock %}
+
+{% block content %}
+<section class="bg-white shadow rounded-lg p-6 md:p-8 space-y-6">
+  <header class="space-y-2">
+    <p class="text-sm font-semibold uppercase tracking-wide text-blue-600">Quick Certificate</p>
+    <h1 class="text-3xl font-bold text-gray-900">
+      {% if current_mode == "simple" %}
+        Generate a self-signed certificate
+      {% else %}
+        Advanced mode – full X.509 control
+      {% endif %}
+    </h1>
+    <p class="text-gray-700">
+      {% if current_mode == "simple" %}
+        Simple mode creates a single self-signed certificate and private key tailored for lab and localhost scenarios.
+      {% else %}
+        Advanced mode exposes CA flags, Key Usage, EKU, CRL, OCSP, and custom extensions so you can model real PKI flows without leaving the browser.
+      {% endif %}
+    </p>
+  </header>
+
+  <div class="flex flex-wrap gap-3" role="tablist">
+    <a href="/quick-cert?mode=simple" role="tab" aria-selected="{{ 'true' if current_mode == 'simple' else 'false' }}" class="px-4 py-2 rounded-md text-sm font-semibold {% if current_mode == 'simple' %}bg-gray-900 text-white{% else %}bg-gray-100 text-gray-600{% endif %}">
+      Simple
+    </a>
+    <a href="/quick-cert?mode=advanced" role="tab" aria-selected="{{ 'true' if current_mode == 'advanced' else 'false' }}" class="px-4 py-2 rounded-md text-sm font-semibold {% if current_mode == 'advanced' %}bg-gray-900 text-white{% else %}bg-gray-100 text-gray-600{% endif %}">
+      Advanced
+    </a>
+  </div>
+
+  {% if form_errors %}
+    <div class="rounded-lg border border-red-200 bg-red-50 p-4 text-red-900">
+      <p class="font-semibold">Please fix the following:</p>
+      <ul class="list-disc list-inside space-y-1 mt-2">
+        {% for error in form_errors %}
+          <li>{{ error }}</li>
+        {% endfor %}
+      </ul>
+    </div>
+  {% endif %}
+
+  <form method="post" class="space-y-6">
+    <input type="hidden" name="mode" value="{{ current_mode }}" />
+
+    <div class="grid gap-6 lg:grid-cols-2">
+      <section class="p-5 border border-gray-200 rounded-lg space-y-4">
+        <h2 class="text-xl font-semibold text-gray-900">Subject &amp; identity</h2>
+        <div>
+          <label for="common_name" class="block text-sm font-medium text-gray-700">Common Name (CN) *</label>
+          <input type="text" id="common_name" name="common_name" required value="{{ form_values.common_name }}" class="mt-1 w-full rounded-md border-gray-300 focus:border-blue-500 focus:ring-blue-500" placeholder="example.local" />
+        </div>
+        <div>
+          <label for="organization" class="block text-sm font-medium text-gray-700">Organization (O)</label>
+          <input type="text" id="organization" name="organization" value="{{ form_values.organization }}" class="mt-1 w-full rounded-md border-gray-300 focus:border-blue-500 focus:ring-blue-500" />
+        </div>
+        <div class="grid gap-4 md:grid-cols-2">
+          <div>
+            <label for="organizational_unit" class="block text-sm font-medium text-gray-700">Organizational Unit (OU)</label>
+            <input type="text" id="organizational_unit" name="organizational_unit" value="{{ form_values.organizational_unit }}" class="mt-1 w-full rounded-md border-gray-300 focus:border-blue-500 focus:ring-blue-500" />
+          </div>
+          <div>
+            <label for="locality" class="block text-sm font-medium text-gray-700">Locality / City (L)</label>
+            <input type="text" id="locality" name="locality" value="{{ form_values.locality }}" class="mt-1 w-full rounded-md border-gray-300 focus:border-blue-500 focus:ring-blue-500" />
+          </div>
+        </div>
+        <div class="grid gap-4 md:grid-cols-2">
+          <div>
+            <label for="state" class="block text-sm font-medium text-gray-700">State / Province (ST)</label>
+            <input type="text" id="state" name="state" value="{{ form_values.state }}" class="mt-1 w-full rounded-md border-gray-300 focus:border-blue-500 focus:ring-blue-500" />
+          </div>
+          <div>
+            <label for="country" class="block text-sm font-medium text-gray-700">Country (C)</label>
+            <input type="text" id="country" name="country" maxlength="2" value="{{ form_values.country }}" class="mt-1 w-full rounded-md border-gray-300 focus:border-blue-500 focus:ring-blue-500" placeholder="US" />
+          </div>
+        </div>
+      </section>
+
+      <section class="p-5 border border-gray-200 rounded-lg space-y-4">
+        <h2 class="text-xl font-semibold text-gray-900">Subject Alternative Names</h2>
+        <div>
+          <label for="dns_sans" class="block text-sm font-medium text-gray-700">DNS SANs</label>
+          <input type="text" id="dns_sans" name="dns_sans" value="{{ form_values.dns_sans }}" class="mt-1 w-full rounded-md border-gray-300 focus:border-blue-500 focus:ring-blue-500" placeholder="example.local, www.example.local" />
+          <p class="mt-1 text-xs text-gray-500">Comma separated hostnames.</p>
+        </div>
+        <div>
+          <label for="ip_sans" class="block text-sm font-medium text-gray-700">IP SANs</label>
+          <input type="text" id="ip_sans" name="ip_sans" value="{{ form_values.ip_sans }}" class="mt-1 w-full rounded-md border-gray-300 focus:border-blue-500 focus:ring-blue-500" placeholder="127.0.0.1, 192.168.1.50" />
+        </div>
+      </section>
+    </div>
+
+    <section class="p-5 border border-gray-200 rounded-lg space-y-4">
+      <h2 class="text-xl font-semibold text-gray-900">Key settings</h2>
+      <div class="grid gap-4 md:grid-cols-3">
+        <div>
+          <label for="key_algorithm" class="block text-sm font-medium text-gray-700">Algorithm</label>
+          <select id="key_algorithm" name="key_algorithm" class="mt-1 w-full rounded-md border-gray-300 focus:border-blue-500 focus:ring-blue-500">
+            <option value="RSA" {% if form_values.key_algorithm == "RSA" %}selected{% endif %}>RSA</option>
+            <option value="ECDSA" {% if form_values.key_algorithm == "ECDSA" %}selected{% endif %}>ECDSA</option>
+          </select>
+        </div>
+        <div>
+          <label for="key_size" class="block text-sm font-medium text-gray-700">RSA key size</label>
+          <select id="key_size" name="key_size" class="mt-1 w-full rounded-md border-gray-300 focus:border-blue-500 focus:ring-blue-500">
+            <option value="2048" {% if form_values.key_size == 2048 %}selected{% endif %}>2048</option>
+            <option value="3072" {% if form_values.key_size == 3072 %}selected{% endif %}>3072</option>
+            <option value="4096" {% if form_values.key_size == 4096 %}selected{% endif %}>4096</option>
+          </select>
+          <p class="mt-1 text-xs text-gray-500">Used when RSA is selected.</p>
+        </div>
+        <div>
+          <label for="curve" class="block text-sm font-medium text-gray-700">ECDSA curve</label>
+          <select id="curve" name="curve" class="mt-1 w-full rounded-md border-gray-300 focus:border-blue-500 focus:ring-blue-500">
+            <option value="P-256" {% if form_values.curve == "P-256" %}selected{% endif %}>P-256</option>
+            <option value="P-384" {% if form_values.curve == "P-384" %}selected{% endif %}>P-384</option>
+            <option value="P-521" {% if form_values.curve == "P-521" %}selected{% endif %}>P-521</option>
+          </select>
+        </div>
+      </div>
+      <div class="grid gap-4 md:grid-cols-2">
+        <div>
+          <label for="hash_algorithm" class="block text-sm font-medium text-gray-700">Hash algorithm</label>
+          <select id="hash_algorithm" name="hash_algorithm" class="mt-1 w-full rounded-md border-gray-300 focus:border-blue-500 focus:ring-blue-500">
+            <option value="SHA256" {% if form_values.hash_algorithm == "SHA256" %}selected{% endif %}>SHA-256</option>
+            <option value="SHA384" {% if form_values.hash_algorithm == "SHA384" %}selected{% endif %}>SHA-384</option>
+            <option value="SHA512" {% if form_values.hash_algorithm == "SHA512" %}selected{% endif %}>SHA-512</option>
+          </select>
+        </div>
+        <div>
+          <label for="validity_days" class="block text-sm font-medium text-gray-700">Validity (days)</label>
+          <input type="number" id="validity_days" name="validity_days" min="{{ validity_min }}" max="{{ validity_max }}" value="{{ form_values.validity_days }}" class="mt-1 w-full rounded-md border-gray-300 focus:border-blue-500 focus:ring-blue-500" />
+        </div>
+      </div>
+    </section>
+
+    {% if current_mode == "simple" %}
+      <section class="p-5 border border-gray-200 rounded-lg space-y-4">
+        <h2 class="text-xl font-semibold text-gray-900">Usage preset</h2>
+        <div>
+          <label for="usage_preset" class="block text-sm font-medium text-gray-700">Preset</label>
+          <select id="usage_preset" name="usage_preset" class="mt-1 w-full rounded-md border-gray-300 focus:border-blue-500 focus:ring-blue-500">
+            <option value="server_tls" {% if form_values.usage_preset == "server_tls" %}selected{% endif %}>Server TLS</option>
+            <option value="client_tls" {% if form_values.usage_preset == "client_tls" %}selected{% endif %}>Client TLS</option>
+          </select>
+        </div>
+      </section>
+    {% endif %}
+
+    {% if current_mode == "advanced" %}
+      <section class="p-5 border border-gray-200 rounded-lg space-y-4">
+        <h2 class="text-xl font-semibold text-gray-900">Basic constraints</h2>
+        <label class="flex items-start space-x-3">
+          <input type="checkbox" name="is_ca" value="true" class="mt-1 rounded border-gray-300 text-blue-600 focus:ring-blue-500" {% if form_values.is_ca %}checked{% endif %} />
+          <span>
+            <span class="font-medium text-gray-900">Act as a Certificate Authority</span>
+            <p class="text-sm text-gray-600">Enables CA=true with optional path length.</p>
+          </span>
+        </label>
+        <div>
+          <label for="path_length" class="block text-sm font-medium text-gray-700">Path length</label>
+          <input type="number" id="path_length" name="path_length" min="0" value="{{ form_values.path_length }}" class="mt-1 w-full rounded-md border-gray-300 focus:border-blue-500 focus:ring-blue-500" placeholder="Leave blank for unlimited" />
+        </div>
+      </section>
+
+      <section class="p-5 border border-gray-200 rounded-lg space-y-4">
+        <h2 class="text-xl font-semibold text-gray-900">Key Usage</h2>
+        <div class="grid gap-4 md:grid-cols-2">
+          {% set key_usage_fields = [
+            ("key_usage_digital_signature", "Digital Signature"),
+            ("key_usage_non_repudiation", "Non-repudiation"),
+            ("key_usage_key_encipherment", "Key Encipherment"),
+            ("key_usage_data_encipherment", "Data Encipherment"),
+            ("key_usage_key_agreement", "Key Agreement"),
+            ("key_usage_key_cert_sign", "Key Cert Sign"),
+            ("key_usage_crl_sign", "CRL Sign"),
+            ("key_usage_encipher_only", "Encipher Only"),
+            ("key_usage_decipher_only", "Decipher Only"),
+          ] %}
+          {% for field, label in key_usage_fields %}
+            <label class="flex items-start space-x-2">
+              <input type="checkbox" name="{{ field }}" value="true" class="mt-1 rounded border-gray-300 text-blue-600 focus:ring-blue-500" {% if form_values[field] %}checked{% endif %} />
+              <span class="text-sm text-gray-800">{{ label }}</span>
+            </label>
+          {% endfor %}
+        </div>
+      </section>
+
+      <section class="p-5 border border-gray-200 rounded-lg space-y-4">
+        <h2 class="text-xl font-semibold text-gray-900">Extended Key Usage</h2>
+        <div class="grid gap-4 md:grid-cols-2">
+          {% set eku_fields = [
+            ("eku_server_auth", "Server Authentication"),
+            ("eku_client_auth", "Client Authentication"),
+            ("eku_code_signing", "Code Signing"),
+            ("eku_email_protection", "Email Protection"),
+            ("eku_time_stamping", "Time Stamping"),
+            ("eku_ocsp_signing", "OCSP Signing"),
+          ] %}
+          {% for field, label in eku_fields %}
+            <label class="flex items-start space-x-2">
+              <input type="checkbox" name="{{ field }}" value="true" class="mt-1 rounded border-gray-300 text-blue-600 focus:ring-blue-500" {% if form_values[field] %}checked{% endif %} />
+              <span class="text-sm text-gray-800">{{ label }}</span>
+            </label>
+          {% endfor %}
+        </div>
+        <div>
+          <label for="eku_custom_oids" class="block text-sm font-medium text-gray-700">Custom EKU OIDs</label>
+          <input type="text" id="eku_custom_oids" name="eku_custom_oids" value="{{ form_values.eku_custom_oids }}" class="mt-1 w-full rounded-md border-gray-300 focus:border-blue-500 focus:ring-blue-500" placeholder="1.3.6.1.5.5.7.3.1" />
+          <p class="mt-1 text-xs text-gray-500">Comma separated dotted identifiers.</p>
+        </div>
+      </section>
+
+      <section class="p-5 border border-gray-200 rounded-lg space-y-4">
+        <h2 class="text-xl font-semibold text-gray-900">Advanced extensions</h2>
+        <div class="grid gap-4 md:grid-cols-2">
+          <div>
+            <p class="text-sm font-medium text-gray-700">Subject Key Identifier</p>
+            <label class="flex items-center space-x-2 mt-2">
+              <input type="radio" name="subject_key_identifier" value="auto" class="text-blue-600 focus:ring-blue-500" {% if form_values.subject_key_identifier == "auto" %}checked{% endif %} />
+              <span class="text-sm text-gray-800">Auto (recommended)</span>
+            </label>
+            <label class="flex items-center space-x-2 mt-2">
+              <input type="radio" name="subject_key_identifier" value="omit" class="text-blue-600 focus:ring-blue-500" {% if form_values.subject_key_identifier == "omit" %}checked{% endif %} />
+              <span class="text-sm text-gray-800">Omit</span>
+            </label>
+          </div>
+          <div>
+            <p class="text-sm font-medium text-gray-700">Authority Key Identifier</p>
+            <label class="flex items-center space-x-2 mt-2">
+              <input type="radio" name="authority_key_identifier" value="match_subject" class="text-blue-600 focus:ring-blue-500" {% if form_values.authority_key_identifier == "match_subject" %}checked{% endif %} />
+              <span class="text-sm text-gray-800">Match subject (self-signed)</span>
+            </label>
+            <label class="flex items-center space-x-2 mt-2">
+              <input type="radio" name="authority_key_identifier" value="omit" class="text-blue-600 focus:ring-blue-500" {% if form_values.authority_key_identifier == "omit" %}checked{% endif %} />
+              <span class="text-sm text-gray-800">Omit</span>
+            </label>
+          </div>
+        </div>
+        <div class="grid gap-4 md:grid-cols-2">
+          <div>
+            <label for="crl_distribution_points" class="block text-sm font-medium text-gray-700">CRL distribution URLs</label>
+            <textarea id="crl_distribution_points" name="crl_distribution_points" rows="3" class="mt-1 w-full rounded-md border-gray-300 focus:border-blue-500 focus:ring-blue-500" placeholder="https://pki.example.local/crl.pem">{{ form_values.crl_distribution_points }}</textarea>
+            <p class="mt-1 text-xs text-gray-500">One per line.</p>
+          </div>
+          <div>
+            <label for="ocsp_urls" class="block text-sm font-medium text-gray-700">OCSP responder URLs</label>
+            <textarea id="ocsp_urls" name="ocsp_urls" rows="3" class="mt-1 w-full rounded-md border-gray-300 focus:border-blue-500 focus:ring-blue-500" placeholder="https://pki.example.local/ocsp">{{ form_values.ocsp_urls }}</textarea>
+          </div>
+        </div>
+        <div class="space-y-4">
+          <p class="text-sm font-medium text-gray-700">Custom extensions</p>
+          {% for idx in range(custom_extension_slots) %}
+            {% set entry = form_values.custom_extensions[idx] %}
+            <div class="border border-gray-200 rounded-md p-4 space-y-3">
+              <div class="grid gap-4 md:grid-cols-2">
+                <div>
+                  <label class="block text-sm font-medium text-gray-700" for="custom_extensions-{{ idx }}-oid">OID</label>
+                  <input type="text" id="custom_extensions-{{ idx }}-oid" name="custom_extensions-{{ idx }}-oid" value="{{ entry.oid }}" class="mt-1 w-full rounded-md border-gray-300 focus:border-blue-500 focus:ring-blue-500" placeholder="1.3.6.1.4.1..." />
+                </div>
+                <label class="flex items-start space-x-2">
+                  <input type="checkbox" name="custom_extensions-{{ idx }}-critical" value="true" class="mt-1 rounded border-gray-300 text-blue-600 focus:ring-blue-500" {% if entry.critical %}checked{% endif %} />
+                  <span class="text-sm text-gray-800">Critical</span>
+                </label>
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700" for="custom_extensions-{{ idx }}-value">Value</label>
+                <textarea id="custom_extensions-{{ idx }}-value" name="custom_extensions-{{ idx }}-value" rows="3" class="mt-1 w-full rounded-md border-gray-300 focus:border-blue-500 focus:ring-blue-500" placeholder="Binary data is supported via UTF-8 text">{{ entry.value }}</textarea>
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+      </section>
+    {% endif %}
+
+    <section class="p-5 border border-gray-200 rounded-lg space-y-4">
+      <h2 class="text-xl font-semibold text-gray-900">Output &amp; download</h2>
+      <div class="grid gap-4 md:grid-cols-2">
+        <label class="flex items-start space-x-3">
+          <input type="checkbox" name="output_pem_cert" value="true" class="mt-1 rounded border-gray-300 text-blue-600 focus:ring-blue-500" {% if form_values.output_pem_cert %}checked{% endif %} />
+          <span>
+            <span class="font-medium text-gray-900">Certificate (.pem)</span>
+            <p class="text-sm text-gray-600">PEM encoded X.509 certificate.</p>
+          </span>
+        </label>
+        <label class="flex items-start space-x-3">
+          <input type="checkbox" name="output_pem_key" value="true" class="mt-1 rounded border-gray-300 text-blue-600 focus:ring-blue-500" {% if form_values.output_pem_key %}checked{% endif %} />
+          <span>
+            <span class="font-medium text-gray-900">Private key (.pem)</span>
+            <p class="text-sm text-gray-600">Unencrypted private key in PEM format.</p>
+          </span>
+        </label>
+        <label class="flex items-start space-x-3">
+          <input type="checkbox" name="output_combined_pem" value="true" class="mt-1 rounded border-gray-300 text-blue-600 focus:ring-blue-500" {% if form_values.output_combined_pem %}checked{% endif %} />
+          <span>
+            <span class="font-medium text-gray-900">Combined bundle</span>
+            <p class="text-sm text-gray-600">Certificate and key in a single PEM file.</p>
+          </span>
+        </label>
+        <label class="flex items-start space-x-3">
+          <input type="checkbox" name="output_pfx" value="true" class="mt-1 rounded border-gray-300 text-blue-600 focus:ring-blue-500" {% if form_values.output_pfx %}checked{% endif %} />
+          <span>
+            <span class="font-medium text-gray-900">PFX / PKCS#12</span>
+            <p class="text-sm text-gray-600">Requires a password.</p>
+          </span>
+        </label>
+      </div>
+      <div class="grid gap-4 md:grid-cols-2">
+        <div>
+          <label for="pfx_password" class="block text-sm font-medium text-gray-700">PFX password</label>
+          <input type="password" id="pfx_password" name="pfx_password" value="{{ form_values.pfx_password }}" class="mt-1 w-full rounded-md border-gray-300 focus:border-blue-500 focus:ring-blue-500" />
+        </div>
+        <div>
+          <label for="pfx_password_confirm" class="block text-sm font-medium text-gray-700">Confirm password</label>
+          <input type="password" id="pfx_password_confirm" name="pfx_password_confirm" value="{{ form_values.pfx_password_confirm }}" class="mt-1 w-full rounded-md border-gray-300 focus:border-blue-500 focus:ring-blue-500" />
+        </div>
+      </div>
+      <div>
+        <label for="label" class="block text-sm font-medium text-gray-700">Friendly label (optional)</label>
+        <input type="text" id="label" name="label" value="{{ form_values.label }}" class="mt-1 w-full rounded-md border-gray-300 focus:border-blue-500 focus:ring-blue-500" placeholder="Lab demo cert" />
+      </div>
+    </section>
+
+    <section class="p-5 border border-gray-200 rounded-lg space-y-3">
+      <h2 class="text-xl font-semibold text-gray-900">LabCA storage</h2>
+      <label class="flex items-start space-x-3">
+        <input type="checkbox" name="store_in_labca" value="true" class="mt-1 rounded border-gray-300 text-blue-600 focus:ring-blue-500" {% if form_values.store_in_labca %}checked{% endif %} />
+        <span>
+          <span class="font-medium text-gray-900">Store this certificate in LabCA</span>
+          <p class="text-sm text-gray-600">Adds it to the Issued Certificates list with the "quick-cert" tag so you can reference or download it later.</p>
+        </span>
+      </label>
+      <p class="text-sm text-gray-500">Leave unchecked for fully stateless generation.</p>
+    </section>
+
+    <div class="sticky bottom-0 bg-white border-t border-gray-200 py-4 px-2 md:px-0">
+      <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+        <p class="text-sm text-gray-600">
+          {% if current_mode == "simple" %}
+            Simple mode uses SHA-2, SAN extensions, and recommended key usages for you.
+          {% else %}
+            Advanced mode keeps everything stateless - copy downloads immediately after generation.
+          {% endif %}
+        </p>
+        <button type="submit" class="inline-flex items-center justify-center rounded-md bg-blue-600 px-6 py-3 text-white font-semibold shadow hover:bg-blue-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+          Generate certificate
+        </button>
+      </div>
+    </div>
+  </form>
+</section>
+{% endblock %}

@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+
+{% block title %}Audit Log{% endblock %}
+
+{% block content %}
+<section class="space-y-6">
+  <div>
+    <h1 class="text-2xl font-semibold">Audit Log</h1>
+    <p class="text-sm text-gray-600">Track key actions including CA changes, certificate issuance, settings updates, and API token activity.</p>
+  </div>
+
+  <form method="get" class="bg-white shadow rounded-lg p-6 grid gap-4 md:grid-cols-4">
+    <div>
+      <label for="start" class="block text-sm font-medium text-gray-700">Start (UTC)</label>
+      <input type="datetime-local" id="start" name="start" value="{{ filters.start }}" class="mt-1 w-full rounded border-gray-300 focus:ring-blue-500 focus:border-blue-500" />
+    </div>
+    <div>
+      <label for="end" class="block text-sm font-medium text-gray-700">End (UTC)</label>
+      <input type="datetime-local" id="end" name="end" value="{{ filters.end }}" class="mt-1 w-full rounded border-gray-300 focus:ring-blue-500 focus:border-blue-500" />
+    </div>
+    <div>
+      <label for="action" class="block text-sm font-medium text-gray-700">Action</label>
+      <input type="text" id="action" name="action" value="{{ filters.action }}" class="mt-1 w-full rounded border-gray-300 focus:ring-blue-500 focus:border-blue-500" placeholder="ISSUE_CERT" />
+    </div>
+    <div>
+      <label for="actor" class="block text-sm font-medium text-gray-700">Actor</label>
+      <input type="text" id="actor" name="actor" value="{{ filters.actor }}" class="mt-1 w-full rounded border-gray-300 focus:ring-blue-500 focus:border-blue-500" placeholder="web-ui or token prefix" />
+    </div>
+    <div class="md:col-span-4 flex justify-end">
+      <button type="submit" class="inline-flex items-center px-4 py-2 rounded bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+        Apply filters
+      </button>
+    </div>
+  </form>
+
+  <div class="bg-white shadow rounded-lg overflow-x-auto">
+    <table class="min-w-full text-sm">
+      <thead class="bg-gray-50 text-xs uppercase tracking-wider text-gray-500">
+        <tr>
+          <th class="px-4 py-2 text-left">Time (UTC)</th>
+          <th class="px-4 py-2 text-left">Actor</th>
+          <th class="px-4 py-2 text-left">Action</th>
+          <th class="px-4 py-2 text-left">Target</th>
+          <th class="px-4 py-2 text-left">Status</th>
+          <th class="px-4 py-2 text-left">IP</th>
+          <th class="px-4 py-2 text-left">Details</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% if logs %}
+          {% for log in logs %}
+            <tr class="border-t">
+              <td class="px-4 py-2 text-gray-700 whitespace-nowrap">{{ log.timestamp.strftime("%Y-%m-%d %H:%M:%S") }}</td>
+              <td class="px-4 py-2">
+                <div class="flex flex-col">
+                  <span class="font-medium text-gray-900">{{ log.actor_type.value }}</span>
+                  <span class="text-xs text-gray-500">{{ log.actor_id or "—" }}</span>
+                </div>
+              </td>
+              <td class="px-4 py-2 text-gray-800 font-semibold">{{ log.action }}</td>
+              <td class="px-4 py-2 text-gray-700">
+                {{ log.target_type }}
+                {% if log.target_id %}
+                  <span class="block text-xs text-gray-500">{{ log.target_id }}</span>
+                {% endif %}
+              </td>
+              <td class="px-4 py-2">
+                <span class="px-2 py-0.5 rounded-full text-xs font-semibold {% if log.status.value == 'SUCCESS' %}bg-green-100 text-green-800{% else %}bg-red-100 text-red-800{% endif %}">
+                  {{ log.status.value }}
+                </span>
+              </td>
+              <td class="px-4 py-2 text-gray-600">{{ log.ip_address or "—" }}</td>
+              <td class="px-4 py-2 text-gray-600">
+                <pre class="text-xs bg-gray-50 rounded p-2 overflow-auto">{{ log.details_json | tojson(indent=2) }}</pre>
+              </td>
+            </tr>
+          {% endfor %}
+        {% else %}
+          <tr>
+            <td colspan="7" class="px-4 py-6 text-center text-gray-500">No audit events match the current filters.</td>
+          </tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}

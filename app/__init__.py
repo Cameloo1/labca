@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 """Compatibility shim so the application package lives at project_root/app.
 
 The actual sources are stored under alembic/app because they were bundled with
@@ -20,3 +21,9 @@ if _app_path_str not in sys.path:
     sys.path.append(_app_path_str)
 
 __path__ = [_app_path_str]
+=======
+__all__ = ["__version__"]
+
+__version__ = "0.1.0"
+
+>>>>>>> cd39ac5c7b9a44db3007118c8c18de9e2c893f42
