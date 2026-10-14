@@ -2,19 +2,13 @@
 
 from __future__ import annotations
 
-import json
 from datetime import datetime, timedelta, timezone
 
-import pytest
-
 from app.models import (
-    CAStatusEnum,
     CASourceTypeEnum,
+    CAStatusEnum,
     CertificateAuthority,
-    CertificateStatusEnum,
-    CertificateTypeEnum,
 )
-from app.models.settings import AppSettings
 
 
 def _create_test_ca(db_session) -> CertificateAuthority:
@@ -148,7 +142,11 @@ def test_ca_creation_empty_cn(client, db_session):
     # If it succeeds (200), it means validation happens later or CN is optional
     # If it fails (400), it should have an error message
     if response.status_code == 400:
-        assert "cn" in response.text.lower() or "common name" in response.text.lower() or "required" in response.text.lower()
+        assert (
+            "cn" in response.text.lower()
+            or "common name" in response.text.lower()
+            or "required" in response.text.lower()
+        )
 
 
 def test_ca_creation_very_long_validity(client, db_session):
@@ -337,4 +335,3 @@ def test_certificate_issuance_from_ca_extreme_validity(client, db_session):
     assert response.status_code != 500
     if response.status_code == 400:
         assert "validity" in response.text.lower() or "days" in response.text.lower()
-

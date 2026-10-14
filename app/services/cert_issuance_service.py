@@ -5,7 +5,7 @@ from __future__ import annotations
 import base64
 from datetime import datetime, timedelta, timezone
 from ipaddress import ip_address
-from typing import List, Optional
+from typing import Dict, List, Optional, Type, Union
 
 from cryptography import x509
 from cryptography.hazmat.primitives import hashes, serialization
@@ -17,13 +17,13 @@ from app.models import CertificateAuthority, CertificateStatusEnum, CertificateT
 from app.schemas import IssueFromCAConfig
 from app.services.persistence import create_certificate
 
-HASH_ALGOS = {
+HASH_ALGOS: Dict[str, Type[Union[hashes.SHA256, hashes.SHA384, hashes.SHA512]]] = {
     "SHA256": hashes.SHA256,
     "SHA384": hashes.SHA384,
     "SHA512": hashes.SHA512,
 }
 
-CURVE_MAP = {
+CURVE_MAP: Dict[str, Type[Union[ec.SECP256R1, ec.SECP384R1, ec.SECP521R1]]] = {
     "P-256": ec.SECP256R1,
     "P-384": ec.SECP384R1,
     "P-521": ec.SECP521R1,
@@ -65,7 +65,7 @@ def issue_cert_from_ca(
         .not_valid_after(not_after)
     )
 
-    san_entries = []
+    san_entries: List[x509.GeneralName] = []
     for dns in config.dns_sans:
         san_entries.append(x509.DNSName(dns))
     for ip in config.ip_sans:

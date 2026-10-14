@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
 from ipaddress import ip_address
-from typing import Dict, List
+from typing import Dict, List, Union
 
 from cryptography import x509
 from cryptography.hazmat.primitives import hashes, serialization
@@ -25,7 +25,7 @@ CURVE_MAP: Dict[str, ec.EllipticCurve] = {
     "P-521": ec.SECP521R1(),
 }
 
-HASH_ALGORITHM_MAP: Dict[str, hashes.HashAlgorithm] = {
+HASH_ALGORITHM_MAP: Dict[str, Union[hashes.SHA256, hashes.SHA384, hashes.SHA512]] = {
     "SHA256": hashes.SHA256(),
     "SHA384": hashes.SHA384(),
     "SHA512": hashes.SHA512(),
@@ -63,7 +63,7 @@ def generate_self_signed_cert_simple(config: SimpleCertConfig) -> GeneratedCertB
         .not_valid_after(not_after)
     )
 
-    san_entries = []
+    san_entries: List[x509.GeneralName] = []
     for dns in config.dns_sans:
         san_entries.append(x509.DNSName(dns))
     for ip_str in config.ip_sans:
@@ -137,9 +137,7 @@ def generate_self_signed_cert_simple(config: SimpleCertConfig) -> GeneratedCertB
         "encipher_only": False,
         "decipher_only": False,
     }
-    eku_labels = (
-        ["serverAuth"] if config.usage_preset == "server_tls" else ["clientAuth"]
-    )
+    eku_labels = ["serverAuth"] if config.usage_preset == "server_tls" else ["clientAuth"]
 
     bundle = GeneratedCertBundle(
         cert_pem=cert_pem,
@@ -196,7 +194,7 @@ def generate_self_signed_cert_advanced(config: AdvancedCertConfig) -> GeneratedC
         .not_valid_after(not_after)
     )
 
-    san_entries = []
+    san_entries: List[x509.GeneralName] = []
     for dns in config.dns_sans:
         san_entries.append(x509.DNSName(dns))
     for ip_str in config.ip_sans:

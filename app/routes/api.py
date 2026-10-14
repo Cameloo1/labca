@@ -2,22 +2,22 @@ from __future__ import annotations
 
 import base64
 from datetime import datetime, timezone
-from typing import Optional, Tuple
+from typing import Literal, Optional, Tuple, cast
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, status
 from sqlalchemy.orm import Session
 
 from app.config import get_settings
-from app.logging_config import logger
 from app.dependencies import get_api_token, get_db
+from app.logging_config import logger
 from app.models import (
+    ActorType,
     AllowKeyDownloadPolicy,
     ApiToken,
+    AuditStatus,
     Certificate,
     CertificateAuthority,
     CertificateTypeEnum,
-    ActorType,
-    AuditStatus,
 )
 from app.schemas import (
     CertificateIssueRequest,
@@ -30,11 +30,14 @@ from app.schemas import (
     TokenPermissions,
 )
 from app.services.api_token_service import create_token
+from app.services.audit_service import log_action
 from app.services.cert_issuance_service import issue_cert_from_ca
 from app.services.crypto_service import generate_self_signed_cert_simple
 from app.services.quick_cert_service import save_quick_cert_to_db
 from app.services.settings_service import get_app_settings
-from app.services.audit_service import log_action
+
+# Alias for the key_size type of the config models, which validate the value at runtime.
+KeySize = Optional[Literal[2048, 3072, 4096]]
 
 router = APIRouter(prefix="/api/v1", tags=["api"])
 
@@ -80,7 +83,7 @@ def create_api_token(
     )
     logger.info(
         "API token created",
-        extra={"token_prefix": token.token_prefix, "name": token.name},
+        extra={"token_prefix": token.token_prefix, "token_name": token.name},
     )
     permissions = TokenPermissions(**(token.permissions_json or {}))
     return TokenCreateResponse(
@@ -183,7 +186,7 @@ def _issue_via_ca(payload: CertificateIssueRequest, db: Session) -> Tuple[Certif
     if ca is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Issuer CA not found.")
     config = IssueFromCAConfig(
-        issuer_ca_id=payload.issuer_ca_id,
+        issuer_ca_id=ca.id,
         common_name=payload.common_name,
         dns_sans=payload.dns_sans,
         ip_sans=payload.ip_sans,
@@ -193,7 +196,7 @@ def _issue_via_ca(payload: CertificateIssueRequest, db: Session) -> Tuple[Certif
         state=payload.state,
         locality=payload.locality,
         key_algorithm=payload.key_algorithm,
-        key_size=payload.key_size if payload.key_algorithm == "RSA" else None,
+        key_size=cast(KeySize, payload.key_size) if payload.key_algorithm == "RSA" else None,
         curve=payload.curve if payload.key_algorithm == "ECDSA" else None,
         hash_algorithm=payload.hash_algorithm,
         validity_days=payload.validity_days,
@@ -230,7 +233,7 @@ def _issue_self_signed(payload: CertificateIssueRequest, db: Session) -> Tuple[C
         state=payload.state,
         locality=payload.locality,
         key_algorithm=payload.key_algorithm,
-        key_size=payload.key_size if payload.key_algorithm == "RSA" else None,
+        key_size=cast(KeySize, payload.key_size) if payload.key_algorithm == "RSA" else None,
         curve=payload.curve if payload.key_algorithm == "ECDSA" else None,
         hash_algorithm=payload.hash_algorithm,
         validity_days=payload.validity_days,

@@ -5,7 +5,7 @@ from typing import Any, Dict, Optional
 
 from sqlalchemy.orm import Session
 
-from app.models import AuditLog, AuditStatus, ActorType
+from app.models import ActorType, AuditLog, AuditStatus
 
 
 def log_action(

@@ -107,7 +107,7 @@ def _render_page(
         "created_token_value": created_token_value,
         "creation_enabled": bool(settings.API_TOKEN_CREATION_SECRET),
     }
-    return templates.TemplateResponse("api.html", context, status_code=status_code)
+    return templates.TemplateResponse(request, "api.html", context, status_code=status_code)
 
 
 def _default_form_values() -> Dict[str, Any]:

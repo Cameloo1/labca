@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Literal, Optional
 
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, model_validator
 
 
 class RootCAConfig(BaseModel):
@@ -22,17 +22,13 @@ class RootCAConfig(BaseModel):
     download_cert: bool = False
     master_passphrase: Optional[str] = None
 
-    @validator("key_size", always=True)
-    def validate_key_size(cls, value, values):
-        if values.get("key_algorithm") == "RSA" and value is None:
+    @model_validator(mode="after")
+    def _validate_key_constraints(self) -> "RootCAConfig":
+        if self.key_algorithm == "RSA" and self.key_size is None:
             raise ValueError("RSA key size is required.")
-        return value
-
-    @validator("curve", always=True)
-    def validate_curve(cls, value, values):
-        if values.get("key_algorithm") == "ECDSA" and value is None:
+        if self.key_algorithm == "ECDSA" and self.curve is None:
             raise ValueError("ECDSA curve is required.")
-        return value
+        return self
 
 
 class ImportCAConfig(BaseModel):

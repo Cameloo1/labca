@@ -1,12 +1,9 @@
 from __future__ import annotations
 
-import pytest
-
-from app.models import AuditLog, ActorType
+from app.models import ActorType, AuditLog
 from app.schemas import RootCAConfig
 from app.services.audit_service import log_action
 from app.services.ca_service import create_root_ca
-
 
 # The API_TOKEN_CREATION_SECRET is already set by conftest.py settings_override fixture
 # No additional fixture needed

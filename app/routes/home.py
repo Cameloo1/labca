@@ -18,6 +18,7 @@ def get_home(
     _db: Session = Depends(get_db),  # ensures dependency wiring for future DB usage
 ) -> HTMLResponse:
     return templates.TemplateResponse(
+        request,
         "home.html",
         {
             "request": request,

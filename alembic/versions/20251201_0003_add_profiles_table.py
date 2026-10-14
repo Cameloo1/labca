@@ -5,8 +5,9 @@ Revises: 20251201_0002
 Create Date: 2025-12-01 19:00:00.000000
 """
 
-from alembic import op
 import sqlalchemy as sa
+
+from alembic import op
 
 revision = "20251201_0003"
 down_revision = "20251201_0002"
@@ -47,8 +48,12 @@ def upgrade() -> None:
         sa.Column("owner_default", sa.String(length=255), nullable=True),
         sa.Column("available_in_simple_mode", sa.Boolean(), nullable=False, server_default=sa.false()),
         sa.Column("active", sa.Boolean(), nullable=False, server_default=sa.true()),
-        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("CURRENT_TIMESTAMP")),
-        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("CURRENT_TIMESTAMP")),
+        sa.Column(
+            "created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("CURRENT_TIMESTAMP")
+        ),
+        sa.Column(
+            "updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("CURRENT_TIMESTAMP")
+        ),
         sa.ForeignKeyConstraint(["default_issuer_ca_id"], ["certificate_authorities.id"], ondelete="SET NULL"),
     )
 

@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Literal, Optional
 
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, model_validator
 
 
 class TokenPermissions(BaseModel):
@@ -51,19 +51,13 @@ class CertificateIssueRequest(BaseModel):
     enable_expiration_reminders: bool = False
     return_private_key: bool = True
 
-    @validator("key_size", always=True)
-    def _require_key_size_for_rsa(cls, value, values):
-        algorithm = values.get("key_algorithm")
-        if algorithm == "RSA" and value is None:
+    @model_validator(mode="after")
+    def _validate_key_constraints(self) -> "CertificateIssueRequest":
+        if self.key_algorithm == "RSA" and self.key_size is None:
             raise ValueError("key_size is required when key_algorithm is RSA.")
-        return value
-
-    @validator("curve", always=True)
-    def _require_curve_for_ecdsa(cls, value, values):
-        algorithm = values.get("key_algorithm")
-        if algorithm == "ECDSA" and value is None:
+        if self.key_algorithm == "ECDSA" and self.curve is None:
             raise ValueError("curve is required when key_algorithm is ECDSA.")
-        return value
+        return self
 
 
 class CertificateMetadata(BaseModel):

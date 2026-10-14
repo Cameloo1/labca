@@ -5,8 +5,9 @@ Revises: 20251201_0003
 Create Date: 2025-12-01 21:00:00.000000
 """
 
-from alembic import op
 import sqlalchemy as sa
+
+from alembic import op
 
 revision = "20251201_0004"
 down_revision = "20251201_0003"
@@ -24,8 +25,12 @@ def upgrade() -> None:
         sa.Column("permissions_json", sa.JSON(), nullable=False, server_default=sa.text("'{}'")),
         sa.Column("expires_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("last_used_at", sa.DateTime(timezone=True), nullable=True),
-        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("CURRENT_TIMESTAMP")),
-        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("CURRENT_TIMESTAMP")),
+        sa.Column(
+            "created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("CURRENT_TIMESTAMP")
+        ),
+        sa.Column(
+            "updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("CURRENT_TIMESTAMP")
+        ),
     )
     op.create_index("ix_api_tokens_token_prefix", "api_tokens", ["token_prefix"])
 

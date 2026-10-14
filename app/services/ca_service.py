@@ -3,9 +3,8 @@
 from __future__ import annotations
 
 import base64
-import json
 from datetime import datetime, timedelta, timezone
-from typing import Dict, Optional
+from typing import Any, Dict, Optional, Type, Union, cast
 
 from cryptography import x509
 from cryptography.hazmat.primitives import hashes, serialization
@@ -13,17 +12,17 @@ from cryptography.hazmat.primitives.asymmetric import ec, rsa
 from cryptography.x509.oid import NameOID
 from sqlalchemy.orm import Session
 
-from app.models import CAStatusEnum, CASourceTypeEnum, CertificateAuthority
+from app.models import CASourceTypeEnum, CAStatusEnum, CertificateAuthority
 from app.schemas import ImportCAConfig, RootCAConfig
 from app.services.persistence import create_certificate_authority
 
-HASH_ALGORITHMS = {
+HASH_ALGORITHMS: Dict[str, Type[Union[hashes.SHA256, hashes.SHA384, hashes.SHA512]]] = {
     "SHA256": hashes.SHA256,
     "SHA384": hashes.SHA384,
     "SHA512": hashes.SHA512,
 }
 
-CURVE_MAP = {
+CURVE_MAP: Dict[str, Type[Union[ec.SECP256R1, ec.SECP384R1, ec.SECP521R1]]] = {
     "P-256": ec.SECP256R1,
     "P-384": ec.SECP384R1,
     "P-521": ec.SECP521R1,
@@ -150,7 +149,7 @@ def import_ca(config: ImportCAConfig, db: Session) -> CertificateAuthority:
             "not_before": certificate.not_valid_before_utc,
             "not_after": certificate.not_valid_after_utc,
             "key_algorithm": _key_algorithm_label(private_key),
-            "key_size": private_key.key_size,
+            "key_size": cast(Union[rsa.RSAPrivateKey, ec.EllipticCurvePrivateKey], private_key).key_size,
             "status": CAStatusEnum.ACTIVE,
             "cert_pem": cert_pem,
             "key_encrypted_pem": encrypted_key,
@@ -202,8 +201,8 @@ def _subject_json_from_config(config: RootCAConfig) -> Dict[str, Optional[str]]:
     }
 
 
-def _subject_json_from_cert(certificate: x509.Certificate, path_length: Optional[int]) -> Dict[str, Optional[str]]:
-    attrs = {
+def _subject_json_from_cert(certificate: x509.Certificate, path_length: Optional[int]) -> Dict[str, Any]:
+    attrs: Dict[str, Any] = {
         "CN": None,
         "O": None,
         "OU": None,
@@ -228,7 +227,7 @@ def _subject_json_from_cert(certificate: x509.Certificate, path_length: Optional
 
 def _get_subject_attribute(certificate: x509.Certificate, oid: x509.ObjectIdentifier) -> Optional[str]:
     values = certificate.subject.get_attributes_for_oid(oid)
-    return values[0].value if values else None
+    return cast(str, values[0].value) if values else None
 
 
 def _key_algorithm_label(private_key) -> str:

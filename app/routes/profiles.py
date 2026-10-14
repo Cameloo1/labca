@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 
-from fastapi import APIRouter, Depends, Form, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
@@ -20,6 +20,7 @@ def profiles_list(request: Request, db: Session = Depends(get_db)) -> HTMLRespon
     profiles = list_profiles(db)
     authorities = db.query(CertificateAuthority).order_by(CertificateAuthority.name).all()
     return templates.TemplateResponse(
+        request,
         "profiles_list.html",
         {"request": request, "profiles": profiles, "authorities": authorities},
     )
@@ -30,6 +31,7 @@ def new_profile_form(request: Request, db: Session = Depends(get_db)) -> HTMLRes
     authorities = db.query(CertificateAuthority).order_by(CertificateAuthority.name).all()
     form_values = _default_form_values()
     return templates.TemplateResponse(
+        request,
         "profile_form.html",
         {
             "request": request,
@@ -57,6 +59,7 @@ def edit_profile_form(profile_id: str, request: Request, db: Session = Depends(g
     authorities = db.query(CertificateAuthority).order_by(CertificateAuthority.name).all()
     form_values = _profile_to_form_values(profile)
     return templates.TemplateResponse(
+        request,
         "profile_form.html",
         {
             "request": request,

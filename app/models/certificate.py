@@ -3,12 +3,15 @@ from __future__ import annotations
 import enum
 import uuid
 from datetime import datetime, timezone
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 
 from sqlalchemy import JSON, Boolean, DateTime, Enum, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .base import Base, TimestampMixin
+
+if TYPE_CHECKING:
+    from .ca import CertificateAuthority
 
 
 class CertificateStatusEnum(str, enum.Enum):

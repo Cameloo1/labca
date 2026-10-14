@@ -20,14 +20,24 @@ from .routes import setup as setup_routes
 
 settings = get_settings()
 
-docs_kwargs = {}
-if settings.ENV.lower() == "prod" and not settings.ENABLE_API_DOCS:
-    docs_kwargs = {"docs_url": None, "redoc_url": None, "openapi_url": None}
+docs_enabled = not (settings.ENV.lower() == "prod" and not settings.ENABLE_API_DOCS)
 
-app = FastAPI(title=settings.APP_NAME, version="0.1.0", **docs_kwargs)
+app = FastAPI(
+    title=settings.APP_NAME,
+    version="0.1.0",
+    docs_url="/docs" if docs_enabled else None,
+    redoc_url="/redoc" if docs_enabled else None,
+    openapi_url="/openapi.json" if docs_enabled else None,
+)
 app.add_middleware(RequestLoggingMiddleware)
-app.add_exception_handler(HTTPException, http_exception_handler)
-app.add_exception_handler(StarletteHTTPException, http_exception_handler)
+app.add_exception_handler(
+    HTTPException,
+    http_exception_handler,  # type: ignore[arg-type]  # Starlette types handlers as Exception; gets HTTPException only
+)
+app.add_exception_handler(
+    StarletteHTTPException,
+    http_exception_handler,  # type: ignore[arg-type]  # Starlette types handlers as Exception; gets HTTPException only
+)
 app.add_exception_handler(Exception, server_exception_handler)
 
 app.mount("/static", StaticFiles(directory="app/static"), name="static")

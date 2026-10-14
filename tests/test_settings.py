@@ -4,8 +4,8 @@ from datetime import datetime, timedelta, timezone
 
 from app.models import (
     AllowKeyDownloadPolicy,
-    CAStatusEnum,
     CASourceTypeEnum,
+    CAStatusEnum,
     Certificate,
     CertificateAuthority,
     CertificateStatusEnum,
@@ -63,11 +63,11 @@ def test_settings_page_shows_defaults(client, db_session):
 def test_default_settings_created_if_missing(client, db_session):
     """Ensure default settings row is created if missing."""
     from app.services.settings_service import get_app_settings
-    
+
     # Verify settings don't exist initially
     settings = db_session.get(AppSettings, 1)
     assert settings is None
-    
+
     # Call get_app_settings which should create defaults
     settings = get_app_settings(db_session)
     assert settings is not None

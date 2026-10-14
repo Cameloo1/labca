@@ -5,7 +5,7 @@ from typing import Union
 
 from sqlalchemy.orm import Session
 
-from app.models import CertificateStatusEnum, CertificateTypeEnum, Certificate
+from app.models import Certificate, CertificateStatusEnum, CertificateTypeEnum
 from app.schemas import AdvancedCertConfig, GeneratedCertBundle, SimpleCertConfig
 from app.services.persistence import create_certificate
 
