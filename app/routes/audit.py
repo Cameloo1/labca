@@ -9,7 +9,7 @@ from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
 from app.dependencies import get_db
-from app.models import AuditLog, ActorType
+from app.models import ActorType, AuditLog
 
 router = APIRouter(prefix="/audit", tags=["audit"])
 templates = Jinja2Templates(directory="app/templates")
@@ -40,6 +40,7 @@ def audit_page(
 
     logs = query.limit(500).all()
     return templates.TemplateResponse(
+        request,
         "audit.html",
         {
             "request": request,

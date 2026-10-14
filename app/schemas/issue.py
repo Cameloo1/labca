@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Literal, Optional
 
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, model_validator
 
 
 class IssueFromCAConfig(BaseModel):
@@ -27,14 +27,10 @@ class IssueFromCAConfig(BaseModel):
     owner: Optional[str] = None
     enable_expiration_reminders: bool = False
 
-    @validator("key_size", always=True)
-    def validate_key_size(cls, value, values):
-        if values.get("key_algorithm") == "RSA" and value is None:
+    @model_validator(mode="after")
+    def _validate_key_constraints(self) -> "IssueFromCAConfig":
+        if self.key_algorithm == "RSA" and self.key_size is None:
             raise ValueError("key_size is required for RSA issuance.")
-        return value
-
-    @validator("curve", always=True)
-    def validate_curve(cls, value, values):
-        if values.get("key_algorithm") == "ECDSA" and value is None:
+        if self.key_algorithm == "ECDSA" and self.curve is None:
             raise ValueError("curve is required for ECDSA issuance.")
-        return value
+        return self

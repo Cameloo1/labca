@@ -6,7 +6,7 @@ from ipaddress import ip_address
 from typing import Any, Dict, List
 from urllib.parse import urlencode
 
-from fastapi import APIRouter, Depends, Request, status
+from fastapi import APIRouter, Depends, Request, Response, status
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
@@ -107,7 +107,7 @@ OID_PATTERN = re.compile(r"^\d+(\.\d+)*$")
 
 
 @router.get("/quick-cert", response_class=HTMLResponse)
-def quick_cert_form(request: Request) -> HTMLResponse:
+def quick_cert_form(request: Request) -> Response:
     current_mode = request.query_params.get("mode", "simple")
     if current_mode not in {"simple", "advanced"}:
         current_mode = "simple"
@@ -121,11 +121,11 @@ def quick_cert_form(request: Request) -> HTMLResponse:
         "validity_max": VALIDITY_MAX_DAYS,
         "custom_extension_slots": CUSTOM_EXTENSION_SLOTS,
     }
-    return templates.TemplateResponse("quick_cert.html", context)
+    return templates.TemplateResponse(request, "quick_cert.html", context)
 
 
 @router.post("/quick-cert", response_class=HTMLResponse)
-async def quick_cert_generate(request: Request, db: Session = Depends(get_db)) -> HTMLResponse:
+async def quick_cert_generate(request: Request, db: Session = Depends(get_db)) -> Response:
     form = await request.form()
     mode = form.get("mode", "simple")
     if mode == "advanced":
@@ -133,7 +133,7 @@ async def quick_cert_generate(request: Request, db: Session = Depends(get_db)) -
     return await _handle_simple_submission(request, form, db)
 
 
-async def _handle_simple_submission(request: Request, form: Any, db: Session) -> HTMLResponse:
+async def _handle_simple_submission(request: Request, form: Any, db: Session) -> Response:
     form_errors: list[str] = []
     sanitized_common_name = form.get("common_name", "").strip()
     if not sanitized_common_name:
@@ -257,10 +257,10 @@ async def _handle_simple_submission(request: Request, form: Any, db: Session) ->
         "validity_days": validity,
         "prefill_url": prefill_url,
     }
-    return templates.TemplateResponse("quick_cert_result.html", context)
+    return templates.TemplateResponse(request, "quick_cert_result.html", context)
 
 
-async def _handle_advanced_submission(request: Request, form: Any, db: Session) -> HTMLResponse:
+async def _handle_advanced_submission(request: Request, form: Any, db: Session) -> Response:
     form_errors: list[str] = []
     sanitized_common_name = form.get("common_name", "").strip()
     if not sanitized_common_name:
@@ -454,7 +454,7 @@ async def _handle_advanced_submission(request: Request, form: Any, db: Session) 
         "validity_days": validity,
         "prefill_url": prefill_url,
     }
-    return templates.TemplateResponse("quick_cert_result.html", context)
+    return templates.TemplateResponse(request, "quick_cert_result.html", context)
 
 
 def _render_form(
@@ -463,7 +463,7 @@ def _render_form(
     form_values: Dict[str, Any],
     form_errors: List[str],
     status_code: int = status.HTTP_200_OK,
-) -> HTMLResponse:
+) -> Response:
     context = {
         "request": request,
         "current_mode": mode,
@@ -473,7 +473,7 @@ def _render_form(
         "validity_max": VALIDITY_MAX_DAYS,
         "custom_extension_slots": CUSTOM_EXTENSION_SLOTS,
     }
-    return templates.TemplateResponse("quick_cert.html", context, status_code=status_code)
+    return templates.TemplateResponse(request, "quick_cert.html", context, status_code=status_code)
 
 
 def _prefill_form_from_query(request: Request, mode: str) -> Dict[str, Any]:

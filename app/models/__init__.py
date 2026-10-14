@@ -1,7 +1,7 @@
 from .api_token import ApiToken
-from .audit import AuditLog, ActorType, AuditStatus
+from .audit import ActorType, AuditLog, AuditStatus
 from .base import Base, TimestampMixin
-from .ca import CAStatusEnum, CASourceTypeEnum, CertificateAuthority
+from .ca import CASourceTypeEnum, CAStatusEnum, CertificateAuthority
 from .certificate import Certificate, CertificateStatusEnum, CertificateTypeEnum
 from .notification import NotificationLog, NotificationRule
 from .profile import Profile, ProfileType

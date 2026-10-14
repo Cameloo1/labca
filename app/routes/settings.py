@@ -7,9 +7,9 @@ from sqlalchemy.orm import Session
 
 from app.dependencies import get_db
 from app.logging_config import logger
-from app.models import AllowKeyDownloadPolicy, ActorType, AuditStatus
-from app.services.settings_service import get_app_settings, update_app_settings
+from app.models import ActorType, AllowKeyDownloadPolicy, AuditStatus
 from app.services.audit_service import log_action
+from app.services.settings_service import get_app_settings, update_app_settings
 
 router = APIRouter(prefix="/settings", tags=["settings"])
 templates = Jinja2Templates(directory="app/templates")
@@ -21,6 +21,7 @@ def settings_page(request: Request, db: Session = Depends(get_db)) -> HTMLRespon
     message = request.query_params.get("message")
     messages = [message] if message else []
     return templates.TemplateResponse(
+        request,
         "settings.html",
         {
             "request": request,

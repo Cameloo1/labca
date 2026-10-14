@@ -1,0 +1,15 @@
+-c requirements.txt
+-r requirements.in
+httpx
+pytest
+pytest-cov
+faker
+playwright
+pytest-playwright
+black
+isort
+flake8
+mypy
+bandit
+pip-audit
+pip-tools

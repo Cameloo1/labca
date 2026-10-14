@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
-from typing import Iterable, List, Tuple
+from typing import Iterable, Tuple
 
 from sqlalchemy.orm import Session
 
@@ -12,10 +12,7 @@ DEFAULT_DELIVERY_METHODS = {"email": True, "webhook": False}
 
 
 def ensure_default_rules(db: Session) -> list[NotificationRule]:
-    existing = {
-        rule.days_before_expiry: rule
-        for rule in db.query(NotificationRule).all()
-    }
+    existing = {rule.days_before_expiry: rule for rule in db.query(NotificationRule).all()}
     created = False
     for offset in DEFAULT_RULE_OFFSETS:
         if offset not in existing:
@@ -28,11 +25,7 @@ def ensure_default_rules(db: Session) -> list[NotificationRule]:
             created = True
     if created:
         db.commit()
-    return (
-        db.query(NotificationRule)
-        .order_by(NotificationRule.days_before_expiry.desc())
-        .all()
-    )
+    return db.query(NotificationRule).order_by(NotificationRule.days_before_expiry.desc()).all()
 
 
 def update_rules(
@@ -90,7 +83,10 @@ def evaluate_rules_for_date(
                     rule_id=rule.id,
                     delivery_method=method,
                     status="pending",
-                    message=f"Notify via {method} for certificate {certificate.common_name} expiring in {rule.days_before_expiry} days.",
+                    message=(
+                        f"Notify via {method} for certificate {certificate.common_name} "
+                        f"expiring in {rule.days_before_expiry} days."
+                    ),
                 )
                 db.add(log)
                 generated_logs.append(log)

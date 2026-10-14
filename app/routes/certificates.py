@@ -4,24 +4,24 @@ import base64
 from datetime import datetime, timedelta, timezone
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends, Form, HTTPException, Query, Request
+from fastapi import APIRouter, Depends, Form, HTTPException, Query, Request, Response
 from fastapi.responses import HTMLResponse, PlainTextResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session, selectinload
 
 from app.dependencies import get_db
+from app.logging_config import logger
 from app.models import (
+    ActorType,
     AllowKeyDownloadPolicy,
+    AuditStatus,
     Certificate,
     CertificateAuthority,
     CertificateStatusEnum,
     CertificateTypeEnum,
-    ActorType,
-    AuditStatus,
 )
-from app.logging_config import logger
-from app.services.revocation_service import revoke_certificate
 from app.services.audit_service import log_action
+from app.services.revocation_service import revoke_certificate
 from app.services.settings_service import get_app_settings
 
 router = APIRouter(prefix="/certificates", tags=["certificates"])
@@ -46,12 +46,8 @@ def list_certificates(
     status: Optional[str] = Query(default=None),
     expiry_filter: Optional[str] = Query(default=None),
     db: Session = Depends(get_db),
-) -> HTMLResponse:
-    query = (
-        db.query(Certificate)
-        .options(selectinload(Certificate.ca))
-        .order_by(Certificate.not_after.desc())
-    )
+) -> Response:
+    query = db.query(Certificate).options(selectinload(Certificate.ca)).order_by(Certificate.not_after.desc())
 
     if issuer_ca_id:
         query = query.filter(Certificate.ca_id == issuer_ca_id)
@@ -107,12 +103,11 @@ def list_certificates(
         certificate_rows.append({"certificate": cert, "status": computed_status})
 
     issuer_options: List[CertificateAuthority] = (
-        db.query(CertificateAuthority)
-        .order_by(CertificateAuthority.name.asc())
-        .all()
+        db.query(CertificateAuthority).order_by(CertificateAuthority.name.asc()).all()
     )
 
     return templates.TemplateResponse(
+        request,
         "certificates_list.html",
         {
             "request": request,
@@ -131,7 +126,7 @@ def list_certificates(
 
 
 @router.get("/{cert_id}", response_class=HTMLResponse)
-def certificate_detail(cert_id: str, request: Request, db: Session = Depends(get_db)) -> HTMLResponse:
+def certificate_detail(cert_id: str, request: Request, db: Session = Depends(get_db)) -> Response:
     certificate = _get_certificate(db, cert_id)
     computed_status = certificate.compute_status()
     app_settings = get_app_settings(db)
@@ -139,6 +134,7 @@ def certificate_detail(cert_id: str, request: Request, db: Session = Depends(get
     message = request.query_params.get("message")
     messages = [message] if message else []
     return templates.TemplateResponse(
+        request,
         "certificate_detail.html",
         {
             "request": request,
@@ -195,7 +191,7 @@ def download_certificate_chain(cert_id: str, db: Session = Depends(get_db)) -> P
 
 
 @router.get("/{cert_id}/revoke", response_class=HTMLResponse)
-def revoke_certificate_form(cert_id: str, request: Request, db: Session = Depends(get_db)) -> HTMLResponse:
+def revoke_certificate_form(cert_id: str, request: Request, db: Session = Depends(get_db)) -> Response:
     certificate = _get_certificate(db, cert_id)
     computed_status = certificate.compute_status()
     if computed_status == CertificateStatusEnum.REVOKED:
@@ -204,6 +200,7 @@ def revoke_certificate_form(cert_id: str, request: Request, db: Session = Depend
             status_code=303,
         )
     return templates.TemplateResponse(
+        request,
         "certificate_revoke.html",
         {
             "request": request,
@@ -271,10 +268,7 @@ def _as_aware(dt: datetime) -> datetime:
 
 def _get_certificate(db: Session, cert_id: str) -> Certificate:
     certificate = (
-        db.query(Certificate)
-        .options(selectinload(Certificate.ca))
-        .filter(Certificate.id == cert_id)
-        .one_or_none()
+        db.query(Certificate).options(selectinload(Certificate.ca)).filter(Certificate.id == cert_id).one_or_none()
     )
     if certificate is None:
         raise HTTPException(status_code=404, detail="Certificate not found.")

@@ -1,15 +1,11 @@
 from __future__ import annotations
-from unittest.mock import patch
 
 from datetime import datetime, timedelta, timezone
-
-import pytest
 
 from app.models import Certificate
 from app.schemas import RootCAConfig
 from app.services.api_token_service import create_token
 from app.services.ca_service import create_root_ca
-
 
 # The API_TOKEN_CREATION_SECRET is already set by conftest.py settings_override fixture
 # No additional fixture needed

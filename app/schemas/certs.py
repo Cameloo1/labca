@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Literal, Optional
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 UsagePreset = Literal["server_tls", "client_tls", "advanced"]
 
@@ -47,7 +47,7 @@ class CustomExtension(BaseModel):
 
 
 class AdvancedCertConfig(SimpleCertConfig):
-    mode: Literal["advanced"] = "advanced"
+    mode: Literal["advanced"] = "advanced"  # type: ignore[assignment]  # subclass swaps the mode tag on purpose
     is_ca: bool = False
     path_length: Optional[int] = None
     key_usage_digital_signature: bool = True
@@ -101,5 +101,4 @@ class GeneratedCertBundle(BaseModel):
     ocsp_urls: list[str] = Field(default_factory=list)
     custom_extension_oids: list[str] = Field(default_factory=list)
 
-    class Config:
-        arbitrary_types_allowed = True
+    model_config = ConfigDict(arbitrary_types_allowed=True)

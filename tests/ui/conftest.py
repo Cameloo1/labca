@@ -58,4 +58,3 @@ def page(context: BrowserContext) -> Generator[Page, None, None]:
 def base_url() -> str:
     """Return the base URL for the application."""
     return BASE_URL
-

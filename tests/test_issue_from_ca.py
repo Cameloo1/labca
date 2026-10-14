@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import timezone
 
 from cryptography import x509
 from cryptography.x509.oid import NameOID
@@ -64,12 +64,12 @@ def test_issue_certificate_from_ca(client, db_session):
     cert = db_session.query(Certificate).first()
     assert cert is not None
     assert cert.ca_id == ca_id
-    
+
     # Verify certificate issuer equals CA subject
     loaded = x509.load_pem_x509_certificate(cert.cert_pem.encode("utf-8"))
     issuer_cn = loaded.issuer.get_attributes_for_oid(NameOID.COMMON_NAME)[0].value
     assert issuer_cn == "Test Root"
-    
+
     # Verify not_after <= CA not_after
     ca = db_session.get(CertificateAuthority, ca_id)
     assert ca is not None

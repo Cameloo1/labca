@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
 
-from app.models import CAStatusEnum, CASourceTypeEnum, CertificateAuthority, Profile
+from app.models import CASourceTypeEnum, CAStatusEnum, CertificateAuthority, Profile
 
 
 def _seed_ca(db_session) -> str:
@@ -70,4 +70,4 @@ def test_profile_crud_and_issue_prefill(client, db_session):
     assert 'value="web.lab"' in issue_form.text
     assert 'value="prod,blue"' in issue_form.text
     assert 'value="svc-team"' in issue_form.text
-    assert 'selected>3072<' in issue_form.text or 'value="3072" selected' in issue_form.text
+    assert "selected>3072<" in issue_form.text or 'value="3072" selected' in issue_form.text

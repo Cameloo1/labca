@@ -6,27 +6,64 @@ build-backend = "setuptools.build_meta"
 name = "labca"
 version = "0.1.0"
 description = "LabCA - Certificate Authority lab environment (FastAPI skeleton)"
-requires-python = ">=3.10"
+requires-python = ">=3.12"
 dependencies = [
-    "fastapi",
-    "uvicorn[standard]",
-    "jinja2",
-    "sqlalchemy",
-    "alembic",
-    "pydantic>=1.10,<2.0",
-    "pydantic-settings",
-    "python-multipart",
-    "httpx",
-    "pytest",
-    "faker",
-    "cryptography",
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.30",
+    "jinja2>=3.1",
+    "sqlalchemy>=2.0",
+    "alembic>=1.13",
+    "pydantic>=2.7",
+    "pydantic-settings>=2.3",
+    "python-multipart>=0.0.9",
+    "cryptography>=43",
 ]
 
 [project.optional-dependencies]
 dev = [
+    "httpx",
     "pytest",
+    "pytest-cov",
+    "faker",
+    "playwright",
+    "pytest-playwright",
     "black",
     "isort",
     "flake8",
     "mypy",
+    "bandit",
+    "pip-audit",
+    "pip-tools",
 ]
+
+[tool.setuptools.packages.find]
+include = ["app*"]
+
+[tool.black]
+line-length = 120
+target-version = ["py312"]
+
+[tool.isort]
+profile = "black"
+line_length = 120
+known_first_party = ["app"]
+
+[tool.mypy]
+python_version = "3.12"
+files = ["app"]
+ignore_missing_imports = true
+warn_unused_ignores = true
+warn_redundant_casts = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = ["ui: Playwright browser tests that need a running LabCA server (run with scripts/test-ui.sh)"]
+addopts = "-m 'not ui'"
+
+[tool.coverage.run]
+source = ["app"]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = false
+fail_under = 85

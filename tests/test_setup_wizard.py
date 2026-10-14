@@ -8,7 +8,7 @@ from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.x509.oid import NameOID
 
-from app.models import CAStatusEnum, CASourceTypeEnum, CertificateAuthority
+from app.models import CASourceTypeEnum, CAStatusEnum, CertificateAuthority
 
 
 def test_root_ca_setup_flow_creates_record(client, db_session):
@@ -113,7 +113,10 @@ def test_setup_redirects_when_ca_exists(client, db_session):
 def test_cas_list_empty_state(client):
     response = client.get("/cas")
     assert response.status_code == 200
-    assert "No Certificate Authorities configured yet." in response.text or "No certificate authorities yet." in response.text
+    assert (
+        "No Certificate Authorities configured yet." in response.text
+        or "No certificate authorities yet." in response.text
+    )
 
 
 def _extract_config_payload(html: str) -> str:

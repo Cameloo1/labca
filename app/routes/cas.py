@@ -9,10 +9,10 @@ from sqlalchemy.orm import Session, selectinload
 
 from app.dependencies import get_db
 from app.logging_config import logger
-from app.models import Certificate, CertificateAuthority, Profile, ActorType, AuditStatus
+from app.models import ActorType, AuditStatus, Certificate, CertificateAuthority, Profile
 from app.schemas import IssueFromCAConfig
-from app.services.cert_issuance_service import issue_cert_from_ca
 from app.services.audit_service import log_action
+from app.services.cert_issuance_service import issue_cert_from_ca
 from app.services.profile_service import get_profile, list_profiles
 
 router = APIRouter(prefix="/cas", tags=["cas"])
@@ -28,6 +28,7 @@ def list_certificate_authorities(request: Request, db: Session = Depends(get_db)
         .all()
     )
     return templates.TemplateResponse(
+        request,
         "cas_list.html",
         {"request": request, "authorities": authorities},
     )
@@ -48,12 +49,10 @@ def certificate_authority_detail(
     if authority is None:
         raise HTTPException(status_code=404, detail="Certificate Authority not found.")
     certificates = (
-        db.query(Certificate)
-        .filter(Certificate.ca_id == ca_id)
-        .order_by(Certificate.created_at.desc())
-        .all()
+        db.query(Certificate).filter(Certificate.ca_id == ca_id).order_by(Certificate.created_at.desc()).all()
     )
     return templates.TemplateResponse(
+        request,
         "cas_detail.html",
         {"request": request, "authority": authority, "certificates": certificates},
     )
@@ -107,7 +106,7 @@ def issue_certificate_form(
         "profiles": profiles,
         "active_profile": active_profile,
     }
-    return templates.TemplateResponse("issue_from_ca.html", context)
+    return templates.TemplateResponse(request, "issue_from_ca.html", context)
 
 
 @router.post("/{ca_id}/issue", response_class=HTMLResponse)
@@ -156,6 +155,7 @@ async def issue_certificate_submit(
     except Exception as exc:
         errors.append(str(exc))
         return templates.TemplateResponse(
+            request,
             "issue_from_ca.html",
             {
                 "request": request,
@@ -174,6 +174,7 @@ async def issue_certificate_submit(
     except ValueError as exc:
         errors.append(str(exc))
         return templates.TemplateResponse(
+            request,
             "issue_from_ca.html",
             {
                 "request": request,

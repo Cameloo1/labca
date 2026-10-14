@@ -11,7 +11,12 @@ __pycache__/
 *.db
 *.sqlite
 *.sqlite3
-<<<<<<< HEAD
 expirements/
-=======
->>>>>>> cd39ac5c7b9a44db3007118c8c18de9e2c893f42
+.coverage
+coverage.xml
+htmlcov/
+test-results/
+.mypy_cache/
+.ruff_cache/
+/data/
+/.dev-keks/

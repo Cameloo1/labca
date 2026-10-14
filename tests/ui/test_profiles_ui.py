@@ -5,12 +5,14 @@ from __future__ import annotations
 import pytest
 from playwright.sync_api import Page
 
+pytestmark = pytest.mark.ui
+
 
 def test_profiles_list_empty_state(page: Page, base_url: str) -> None:
     """Test profiles list page when no profiles exist."""
     page.goto(f"{base_url}/profiles")
     page.wait_for_load_state("networkidle")
-    
+
     # Check for empty state message
     empty_message = page.get_by_text("No profiles created yet.")
     if empty_message.count() > 0:
@@ -28,7 +30,7 @@ def test_create_and_use_profile(page: Page, base_url: str) -> None:
     # Navigate to profiles page
     page.goto(f"{base_url}/profiles")
     page.wait_for_load_state("networkidle")
-    
+
     # Click "New profile" or navigate to /profiles/new
     new_profile_link = page.get_by_role("link", name="New profile")
     if new_profile_link.count() == 0:
@@ -42,35 +44,35 @@ def test_create_and_use_profile(page: Page, base_url: str) -> None:
     else:
         new_profile_link.click()
     page.wait_for_load_state("networkidle")
-    
+
     # Fill in the profile form
     # Name
     name_input = page.locator('input[name="name"]')
     name_input.fill("UI Server TLS")
-    
+
     # Type: Server TLS
     profile_type = page.locator('select[name="profile_type"]')
     if profile_type.count() > 0:
         # Try to select Server TLS
-        profile_type.select_option("server_tls")
-    
+        profile_type.select_option("SERVER_TLS")  # option values are ProfileType values (uppercase)
+
     # Default Key: RSA 2048
     key_algorithm = page.locator('select[name="key_algorithm"]')
     if key_algorithm.count() > 0:
         key_algorithm.select_option("RSA")
-    
+
     key_size = page.locator('input[name="key_size"], select[name="key_size"]')
     if key_size.count() > 0:
-        if key_size.get_attribute("type") == "select-one":
+        if key_size.evaluate("el => el.type") == "select-one":  # DOM property; <select> has no type attribute
             key_size.select_option("2048")
         else:
             key_size.fill("2048")
-    
+
     # Default validity: 90 days
     validity_input = page.locator('input[name="validity_days_default"]')
     if validity_input.count() > 0:
         validity_input.fill("90")
-    
+
     # Add serverAuth EKU
     # This might be in a JSON field or individual checkboxes
     # Try to find EKU configuration
@@ -79,19 +81,19 @@ def test_create_and_use_profile(page: Page, base_url: str) -> None:
         # If it's a textarea with JSON, we might need to update it
         # For now, we'll submit and check that the profile was created
         pass
-    
+
     # Submit the form
     submit_button = page.locator('button[type="submit"], input[type="submit"]').first
     submit_button.click()
     page.wait_for_load_state("networkidle")
-    
+
     # Should be redirected back to profiles list
     assert "/profiles" in page.url or page.url.endswith("/profiles")
-    
+
     # Assert profile row appears
     page_content = page.content()
     assert "UI Server TLS" in page_content
-    
+
     # Click "Use" link to navigate to issue page with profile_id
     # Note: This requires a CA to exist, so the test might need a CA setup first
     use_link = page.get_by_role("link", name="Use")
@@ -103,10 +105,9 @@ def test_create_and_use_profile(page: Page, base_url: str) -> None:
             # For now, verify the link exists and has the correct structure
             assert "profile_id" in href, "Use link should contain profile_id parameter"
             assert "/issue" in href, "Use link should go to issue page"
-            
+
             # If we want to test the prefilled form, we'd need to:
             # 1. Ensure a CA exists (via setup wizard)
             # 2. Click the Use link
             # 3. Verify form is prefilled
             # For now, we'll just verify the link structure is correct
-

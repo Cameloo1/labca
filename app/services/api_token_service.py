@@ -36,11 +36,7 @@ def validate_token(raw_token: str, db: Session) -> Optional[ApiToken]:
     if not raw_token:
         return None
     token_hash = _hash_token(raw_token)
-    token = (
-        db.query(ApiToken)
-        .filter(ApiToken.token_hash == token_hash)
-        .one_or_none()
-    )
+    token = db.query(ApiToken).filter(ApiToken.token_hash == token_hash).one_or_none()
     if token is None:
         return None
     now = datetime.now(timezone.utc)
@@ -54,11 +50,7 @@ def validate_token(raw_token: str, db: Session) -> Optional[ApiToken]:
 
 
 def list_tokens(db: Session) -> list[ApiToken]:
-    return (
-        db.query(ApiToken)
-        .order_by(ApiToken.created_at.desc())
-        .all()
-    )
+    return db.query(ApiToken).order_by(ApiToken.created_at.desc()).all()
 
 
 def _hash_token(raw_token: str) -> str:

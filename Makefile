@@ -1,13 +1,18 @@
-.PHONY: format lint test all
+.PHONY: format lint test test-ui compile-requirements all
 
 format:
-	black app tests
-	isort app tests
+	python -m black app tests alembic && python -m isort app tests alembic
 
 lint:
-	flake8 app tests
+	bash scripts/lint.sh
 
 test:
-	pytest
+	bash scripts/test.sh
+
+test-ui:
+	bash scripts/test-ui.sh
+
+compile-requirements:
+	bash scripts/compile-requirements.sh
 
 all: format lint test

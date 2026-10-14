@@ -5,8 +5,9 @@ Revises:
 Create Date: 2025-12-01 15:30:00.000000
 """
 
-from alembic import op
 import sqlalchemy as sa
+
+from alembic import op
 
 revision = "20251201_0001"
 down_revision = None
@@ -42,8 +43,12 @@ def upgrade() -> None:
         sa.Column("status", ca_status_enum, nullable=False, server_default="ACTIVE"),
         sa.Column("cert_pem", sa.Text(), nullable=False),
         sa.Column("key_encrypted_pem", sa.Text(), nullable=True),
-        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("CURRENT_TIMESTAMP")),
-        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("CURRENT_TIMESTAMP")),
+        sa.Column(
+            "created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("CURRENT_TIMESTAMP")
+        ),
+        sa.Column(
+            "updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("CURRENT_TIMESTAMP")
+        ),
         sa.ForeignKeyConstraint(["parent_ca_id"], ["certificate_authorities.id"], ondelete="SET NULL"),
     )
 
@@ -68,8 +73,12 @@ def upgrade() -> None:
         sa.Column("is_ephemeral", sa.Boolean(), nullable=False),
         sa.Column("revoked_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("revocation_reason", sa.String(length=255), nullable=True),
-        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("CURRENT_TIMESTAMP")),
-        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("CURRENT_TIMESTAMP")),
+        sa.Column(
+            "created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("CURRENT_TIMESTAMP")
+        ),
+        sa.Column(
+            "updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("CURRENT_TIMESTAMP")
+        ),
         sa.ForeignKeyConstraint(["ca_id"], ["certificate_authorities.id"], ondelete="SET NULL"),
     )
 

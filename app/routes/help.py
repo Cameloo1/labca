@@ -10,6 +10,7 @@ templates = Jinja2Templates(directory="app/templates")
 @router.get("/help", response_class=HTMLResponse)
 def help_page(request: Request) -> HTMLResponse:
     return templates.TemplateResponse(
+        request,
         "help.html",
         {"request": request},
     )

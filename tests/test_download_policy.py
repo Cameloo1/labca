@@ -5,18 +5,15 @@ from __future__ import annotations
 import base64
 from datetime import datetime, timedelta, timezone
 
-import pytest
-
 from app.models import (
     AllowKeyDownloadPolicy,
-    CAStatusEnum,
     CASourceTypeEnum,
+    CAStatusEnum,
     Certificate,
     CertificateAuthority,
     CertificateStatusEnum,
     CertificateTypeEnum,
 )
-from app.models.settings import AppSettings
 from app.services.settings_service import update_app_settings
 
 
@@ -251,4 +248,3 @@ def test_certificate_without_stored_key_returns_404(client, db_session):
     # The error detail should be in the response (either JSON for API or HTML for UI)
     # Since this is a UI route, it returns HTML, but the HTTPException detail should be present
     # We just verify the status code is correct
-

@@ -18,6 +18,7 @@ def notifications_page(request: Request, db: Session = Depends(get_db)) -> HTMLR
     message = request.query_params.get("message")
     messages = [message] if message else []
     return templates.TemplateResponse(
+        request,
         "notifications.html",
         {
             "request": request,
