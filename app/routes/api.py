@@ -44,6 +44,7 @@ from app.services.quick_cert_service import save_quick_cert_to_db
 from app.services.revocation_service import revoke_certificate
 from app.services.settings_service import get_app_settings
 from app.services.token_policy import PolicyViolation, can_revoke, check_issuance, policy_for
+from app.services.workload_service import is_reserved_for_workloads, reject_workload_trust_domain_uris
 
 # Alias for the key_size type of the config models, which validate the value at runtime.
 KeySize = Optional[Literal[2048, 3072, 4096]]
@@ -129,15 +130,8 @@ def issue_certificate_via_api(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="API token is not permitted to issue certificates.",
         )
-    try:
-        check_issuance(
-            policy_for(api_token),
-            dns_sans=payload.dns_sans,
-            ip_sans=payload.ip_sans,
-            uri_sans=payload.uri_sans,
-            validity_hours=payload.validity_days * 24,
-        )
-    except PolicyViolation as exc:
+
+    def _deny(message: str) -> HTTPException:
         log_action(
             db,
             actor_type=ActorType.API_TOKEN,
@@ -147,9 +141,26 @@ def issue_certificate_via_api(
             target_id=None,
             status=AuditStatus.FAILURE,
             ip_address=_client_ip(request),
-            details={"reason": str(exc)},
+            details={"reason": message},
         )
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(exc)) from None
+        return HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=message)
+
+    try:
+        check_issuance(
+            policy_for(api_token),
+            dns_sans=payload.dns_sans,
+            ip_sans=payload.ip_sans,
+            uri_sans=payload.uri_sans,
+            validity_hours=payload.validity_days * 24,
+        )
+    except PolicyViolation as exc:
+        raise _deny(str(exc)) from None
+    issuer = db.get(CertificateAuthority, payload.issuer_ca_id) if payload.issuer_ca_id else None
+    if issuer is not None:
+        try:
+            _check_workload_reservation(db, issuer, payload.uri_sans)
+        except ValueError as exc:
+            raise _deny(str(exc)) from None
     if payload.issuer_ca_id:
         result, certificate = _issue_via_ca(payload, db, api_token.id)
     else:
@@ -290,6 +301,12 @@ def sign_csr_via_api(
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(exc)) from None
 
     try:
+        _check_workload_reservation(db, ca, info.uri_sans)
+    except ValueError as exc:
+        _audit_failure(str(exc))
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(exc)) from None
+
+    try:
         certificate = issue_leaf_for_public_key(
             db,
             ca,
@@ -398,6 +415,13 @@ def revoke_certificate_via_api(
         reason=payload.reason,
         revoked_at=_ensure_timezone(certificate.revoked_at or datetime.now(timezone.utc)),
     )
+
+
+def _check_workload_reservation(db: Session, ca: CertificateAuthority, uri_sans: list[str]) -> None:
+    """Keep general issuance away from the workload issuer and the workload trust domain."""
+    if is_reserved_for_workloads(db, ca):
+        raise ValueError("This CA is reserved for workload identities.")
+    reject_workload_trust_domain_uris(uri_sans)
 
 
 def _issue_via_ca(

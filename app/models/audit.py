@@ -15,6 +15,7 @@ class ActorType(str, enum.Enum):
     USER = "USER"
     API_TOKEN = "API_TOKEN"
     SYSTEM = "SYSTEM"
+    WORKLOAD = "WORKLOAD"
 
 
 class AuditStatus(str, enum.Enum):

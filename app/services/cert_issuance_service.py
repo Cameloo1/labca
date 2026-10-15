@@ -19,6 +19,7 @@ from app.schemas import IssueFromCAConfig
 from app.services import keystore
 from app.services.persistence import create_certificate
 from app.services.pki_service import distribution_extensions
+from app.services.workload_service import is_reserved_for_workloads, reject_workload_trust_domain_uris
 
 HASH_ALGOS: Dict[str, Type[Union[hashes.SHA256, hashes.SHA384, hashes.SHA512]]] = {
     "SHA256": hashes.SHA256,
@@ -44,6 +45,9 @@ def issue_cert_from_ca(
     *,
     issued_by_token_id: Optional[str] = None,
 ):
+    if is_reserved_for_workloads(db, ca):
+        raise ValueError("This CA is reserved for workload identities.")
+    reject_workload_trust_domain_uris(config.uri_sans)
     ca_certificate = x509.load_pem_x509_certificate(ca.cert_pem.encode("utf-8"))
     ca_key = load_ca_private_key(ca)
 

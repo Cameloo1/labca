@@ -138,6 +138,7 @@ def issue_leaf_for_public_key(
     environment_tags: Sequence[str],
     owner: Optional[str] = None,
     issued_by_token_id: Optional[str] = None,
+    issued_to_spiffe_id: Optional[str] = None,
 ) -> Certificate:
     if ca.status != CAStatusEnum.ACTIVE:
         raise ValueError("Issuer CA is not active.")
@@ -224,6 +225,7 @@ def issue_leaf_for_public_key(
             "cert_pem": cert_pem,
             "is_ephemeral": False,
             "issued_by_token_id": issued_by_token_id,
+            "issued_to_spiffe_id": issued_to_spiffe_id,
         },
         ca=ca,
     )

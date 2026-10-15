@@ -22,6 +22,7 @@ from .routes import profiles as profiles_routes
 from .routes import quick_cert as quick_cert_routes
 from .routes import settings as settings_routes
 from .routes import setup as setup_routes
+from .routes import workload as workload_routes
 from .startup import run_startup_checks
 
 settings = get_settings()
@@ -76,3 +77,4 @@ app.include_router(api_routes.router)
 app.include_router(notifications_routes.router)
 app.include_router(audit_routes.router)
 app.include_router(pki_routes.router)
+app.include_router(workload_routes.router)

@@ -66,6 +66,7 @@ class Certificate(TimestampMixin, Base):
     revocation_reason: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     revocation_reason_code: Mapped[Optional[str]] = mapped_column(String(32), nullable=True)
     issued_by_token_id: Mapped[Optional[str]] = mapped_column(String(36), nullable=True, index=True)
+    issued_to_spiffe_id: Mapped[Optional[str]] = mapped_column(String(2048), nullable=True, index=True)
 
     ca: Mapped[Optional["CertificateAuthority"]] = relationship(
         "CertificateAuthority",

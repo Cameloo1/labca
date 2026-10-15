@@ -18,6 +18,8 @@ from app.main import app
 from app.models import Base
 from app.services import keystore
 from app.services.revocation_service import restore_post_revoke_hooks, snapshot_post_revoke_hooks
+from app.services.tokenreview import get_token_reviewer
+from app.services.workload_service import reset_rate_limiter
 
 
 @pytest.fixture(scope="function", autouse=True)
@@ -110,3 +112,11 @@ def _restore_post_revoke_hooks() -> Generator[None, None, None]:
     snapshot = snapshot_post_revoke_hooks()
     yield
     restore_post_revoke_hooks(snapshot)
+
+
+@pytest.fixture(scope="function", autouse=True)
+def _reset_workload_state() -> Generator[None, None, None]:
+    """Start each test with a fresh workload rate limiter and token reviewer."""
+    reset_rate_limiter()
+    get_token_reviewer.cache_clear()
+    yield
