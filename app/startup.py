@@ -6,6 +6,7 @@ from typing import Optional
 
 from app.config import Settings
 from app.logging_config import logger
+from app.security.admin_auth import admin_email_set
 from app.services import keystore
 
 
@@ -30,6 +31,19 @@ def run_startup_checks(settings: Settings, keyring: Optional[keystore.KeyRing] =
             problems.append(f"active KEK '{active}' is not loaded")
         if problems:
             raise StartupCheckError("Refusing to start with ENV=prod: " + "; ".join(problems))
+
+    if settings.ENV.lower() == "prod" and settings.ADMIN_AUTH_MODE == "none":
+        raise StartupCheckError("ADMIN_AUTH_MODE=none is not allowed in prod.")
+    if settings.ADMIN_AUTH_MODE == "cloudflare_access":
+        missing: list[str] = []
+        if not settings.CF_ACCESS_TEAM_DOMAIN:
+            missing.append("CF_ACCESS_TEAM_DOMAIN")
+        if not settings.CF_ACCESS_AUD:
+            missing.append("CF_ACCESS_AUD")
+        if not admin_email_set(settings):
+            missing.append("ADMIN_EMAILS")
+        if missing:
+            raise StartupCheckError("ADMIN_AUTH_MODE=cloudflare_access requires: " + ", ".join(missing) + ".")
 
     logger.info(
         "Keyring loaded",

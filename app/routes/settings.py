@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Request, status
 from fastapi.responses import HTMLResponse, RedirectResponse
-from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
 from app.dependencies import get_db
@@ -10,9 +9,9 @@ from app.logging_config import logger
 from app.models import ActorType, AllowKeyDownloadPolicy, AuditStatus
 from app.services.audit_service import log_action
 from app.services.settings_service import get_app_settings, update_app_settings
+from app.templating import templates
 
 router = APIRouter(prefix="/settings", tags=["settings"])
-templates = Jinja2Templates(directory="app/templates")
 
 
 @router.get("", response_class=HTMLResponse)

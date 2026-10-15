@@ -6,7 +6,6 @@ from typing import Any, Dict, Optional, cast
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from fastapi.responses import HTMLResponse, RedirectResponse
-from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
 from app.dependencies import get_db
@@ -16,9 +15,9 @@ from app.schemas import ImportCAConfig, RootCAConfig
 from app.services import keystore
 from app.services.audit_service import log_action
 from app.services.ca_service import create_root_ca, import_ca
+from app.templating import templates
 
 router = APIRouter(tags=["setup"])
-templates = Jinja2Templates(directory="app/templates")
 
 
 @router.get("/setup", response_class=HTMLResponse)

@@ -11,15 +11,15 @@ from cryptography.x509.oid import NameOID
 from app.models import CASourceTypeEnum, CAStatusEnum, CertificateAuthority
 
 
-def test_root_ca_setup_flow_creates_record(client, db_session):
+def test_root_ca_setup_flow_creates_record(client, db_session, csrf):
     response = client.get("/setup")
     assert response.status_code == 200
 
-    response = client.post("/setup/step1", follow_redirects=False)
+    response = client.post("/setup/step1", data=csrf(client), follow_redirects=False)
     assert response.status_code == 303
     assert response.headers["location"] == "/setup/step2"
 
-    response = client.post("/setup/step2", data={"ca_source": "create"}, follow_redirects=False)
+    response = client.post("/setup/step2", data={"ca_source": "create", **csrf(client)}, follow_redirects=False)
     assert response.status_code == 303
     assert response.headers["location"] == "/setup/root"
 
@@ -40,13 +40,13 @@ def test_root_ca_setup_flow_creates_record(client, db_session):
         "download_cert": "true",
         "master_passphrase": "",
     }
-    summary = client.post("/setup/root", data=form_data)
+    summary = client.post("/setup/root", data={**form_data, **csrf(client)})
     assert summary.status_code == 200
     payload = _extract_config_payload(summary.text)
 
     complete = client.post(
         "/setup/complete",
-        data={"mode": "create", "config_payload": payload},
+        data={"mode": "create", "config_payload": payload, **csrf(client)},
         follow_redirects=False,
     )
     assert complete.status_code == 303
@@ -55,10 +55,10 @@ def test_root_ca_setup_flow_creates_record(client, db_session):
     assert db_session.query(CertificateAuthority).count() == 1
 
 
-def test_import_ca_flow_creates_record(client, db_session):
+def test_import_ca_flow_creates_record(client, db_session, csrf):
     cert_pem, key_pem = _generate_test_ca_pem()
-    client.post("/setup/step1")
-    client.post("/setup/step2", data={"ca_source": "import"})
+    client.post("/setup/step1", data=csrf(client))
+    client.post("/setup/step2", data={"ca_source": "import", **csrf(client)})
 
     form_data = {
         "name": "Imported Root",
@@ -68,13 +68,13 @@ def test_import_ca_flow_creates_record(client, db_session):
         "allow_intermediate_issuance": "true",
         "master_passphrase": "",
     }
-    summary = client.post("/setup/import", data=form_data)
+    summary = client.post("/setup/import", data={**form_data, **csrf(client)})
     assert summary.status_code == 200
 
     payload = _extract_config_payload(summary.text)
     complete = client.post(
         "/setup/complete",
-        data={"mode": "import", "config_payload": payload},
+        data={"mode": "import", "config_payload": payload, **csrf(client)},
         follow_redirects=False,
     )
     assert complete.status_code == 303

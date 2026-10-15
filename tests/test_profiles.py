@@ -26,7 +26,7 @@ def _seed_ca(db_session) -> str:
     return ca.id
 
 
-def test_profile_crud_and_issue_prefill(client, db_session):
+def test_profile_crud_and_issue_prefill(client, db_session, csrf):
     ca_id = _seed_ca(db_session)
 
     payload = {
@@ -54,7 +54,7 @@ def test_profile_crud_and_issue_prefill(client, db_session):
         "active": "on",
     }
 
-    response = client.post("/profiles/new", data=payload, follow_redirects=False)
+    response = client.post("/profiles/new", data={**payload, **csrf(client)}, follow_redirects=False)
     assert response.status_code == 303
 
     listing = client.get("/profiles")

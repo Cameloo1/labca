@@ -18,6 +18,7 @@
   </section>
 
   <form method="post" class="space-y-6">
+    {{ csrf_input(request) }}
     <div>
       <label for="reason_code" class="block text-sm font-medium text-gray-700">Revocation reason</label>
       <select id="reason_code" name="reason_code" class="mt-1 w-full rounded-md border-gray-300 focus:border-red-500 focus:ring-red-500">

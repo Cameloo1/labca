@@ -13,7 +13,7 @@ def test_notifications_page_loads_with_defaults(client, db_session):
         assert window in response.text
 
 
-def test_notifications_update_rules(client, db_session):
+def test_notifications_update_rules(client, db_session, csrf):
     response = client.get("/notifications")
     assert response.status_code == 200
     rules = _collect_rules(db_session)
@@ -26,7 +26,7 @@ def test_notifications_update_rules(client, db_session):
             continue
         post_payload[f"rule-{rule.id}-webhook"] = "on"
 
-    update = client.post("/notifications", data=post_payload, follow_redirects=False)
+    update = client.post("/notifications", data={**post_payload, **csrf(client)}, follow_redirects=False)
     assert update.status_code == 303
 
     refreshed = _collect_rules(db_session)

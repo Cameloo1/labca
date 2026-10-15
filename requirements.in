@@ -8,3 +8,5 @@ pydantic-settings>=2.3
 python-multipart>=0.0.9
 cryptography>=43
 httpx
+PyJWT[crypto]
+itsdangerous

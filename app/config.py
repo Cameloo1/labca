@@ -1,6 +1,6 @@
 import re
 from functools import lru_cache
-from typing import Optional
+from typing import Literal, Optional
 from urllib.parse import urlsplit
 
 from pydantic import Field, field_validator
@@ -62,6 +62,18 @@ class Settings(BaseSettings):
         default="/var/run/secrets/kubernetes.io/serviceaccount/ca.crt", description="Kubernetes API CA bundle"
     )
 
+    ADMIN_AUTH_MODE: Literal["none", "localhost_only", "cloudflare_access"] = Field(
+        default="none", description="How admin pages authenticate: none, localhost_only, or cloudflare_access"
+    )
+    CF_ACCESS_TEAM_DOMAIN: Optional[str] = Field(
+        default=None, description="Cloudflare Access team domain, <team>.cloudflareaccess.com"
+    )
+    CF_ACCESS_AUD: Optional[str] = Field(default=None, description="Cloudflare Access application audience tag")
+    ADMIN_EMAILS: str = Field(default="", description="Comma-separated emails allowed to use the admin UI")
+    ADMIN_BREAK_GLASS_LOCALHOST: bool = Field(
+        default=False, description="Allow loopback admin access when Cloudflare Access is unavailable"
+    )
+
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
     @field_validator("WORKLOAD_TRUST_DOMAIN", mode="before")
@@ -71,6 +83,27 @@ class Settings(BaseSettings):
             return None
         if not isinstance(value, str) or not re.fullmatch(r"[a-z0-9._-]{1,255}", value):
             raise ValueError("WORKLOAD_TRUST_DOMAIN must match [a-z0-9._-]{1,255}.")
+        return value
+
+    @field_validator("CF_ACCESS_TEAM_DOMAIN", mode="before")
+    @classmethod
+    def _validate_cf_team_domain(cls, value: object) -> Optional[str]:
+        if value is None or value == "":
+            return None
+        if not isinstance(value, str):
+            raise ValueError("CF_ACCESS_TEAM_DOMAIN must be a string.")
+        lowered = value.lower()
+        if not re.fullmatch(r"[a-z0-9-]{1,63}\.cloudflareaccess\.com", lowered):
+            raise ValueError("CF_ACCESS_TEAM_DOMAIN must look like <team>.cloudflareaccess.com.")
+        return lowered
+
+    @field_validator("CF_ACCESS_AUD", mode="before")
+    @classmethod
+    def _validate_cf_aud(cls, value: object) -> Optional[str]:
+        if value is None or value == "":
+            return None
+        if not isinstance(value, str) or not re.fullmatch(r"[A-Za-z0-9]{1,128}", value):
+            raise ValueError("CF_ACCESS_AUD must be 1 to 128 letters or digits.")
         return value
 
     @field_validator("WORKLOAD_ALLOWLIST", mode="after")

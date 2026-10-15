@@ -62,6 +62,7 @@ def test_prod_accepts_kek_dir(monkeypatch, tmp_path):
     monkeypatch.setenv("ENV", "prod")
     monkeypatch.setenv("LABCA_KEK_DIR", str(tmp_path))
     monkeypatch.setenv("LABCA_ACTIVE_KEK_ID", "prod-1")
+    monkeypatch.setenv("ADMIN_AUTH_MODE", "localhost_only")  # prod refuses ADMIN_AUTH_MODE=none
     monkeypatch.delenv("LABCA_KEK_TEST_1")
     _reset_caches()
     run_startup_checks(get_settings())

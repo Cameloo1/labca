@@ -4,7 +4,6 @@ from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import HTMLResponse, PlainTextResponse, RedirectResponse
-from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session, selectinload
 
 from app.dependencies import get_db
@@ -14,9 +13,9 @@ from app.schemas import IssueFromCAConfig
 from app.services.audit_service import log_action
 from app.services.cert_issuance_service import issue_cert_from_ca
 from app.services.profile_service import get_profile, list_profiles
+from app.templating import templates
 
 router = APIRouter(prefix="/cas", tags=["cas"])
-templates = Jinja2Templates(directory="app/templates")
 
 
 @router.get("", response_class=HTMLResponse)

@@ -2,11 +2,9 @@ from __future__ import annotations
 
 from fastapi import HTTPException, Request
 from fastapi.responses import JSONResponse
-from fastapi.templating import Jinja2Templates
 
 from app.logging_config import logger
-
-templates = Jinja2Templates(directory="app/templates")
+from app.templating import templates
 
 
 async def http_exception_handler(request: Request, exc: HTTPException):

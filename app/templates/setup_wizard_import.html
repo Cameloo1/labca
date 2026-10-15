@@ -24,6 +24,7 @@
   {% endif %}
 
   <form method="post" action="/setup/import" class="space-y-4">
+    {{ csrf_input(request) }}
     <div>
       <label class="block text-sm font-medium text-gray-700" for="name">Display name</label>
       <input type="text" id="name" name="name" value="{{ form_values.name }}" required class="mt-1 w-full rounded-md border-gray-300 focus:border-blue-500 focus:ring-blue-500" />

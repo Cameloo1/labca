@@ -36,7 +36,7 @@ def session_factory():
     app.dependency_overrides.clear()
 
 
-def test_quick_cert_can_be_persisted(session_factory):
+def test_quick_cert_can_be_persisted(session_factory, csrf):
     payload = {
         "mode": "simple",
         "common_name": "persist.local",
@@ -63,7 +63,7 @@ def test_quick_cert_can_be_persisted(session_factory):
         "store_in_labca": "true",
     }
 
-    response = client.post("/quick-cert", data=payload, follow_redirects=False)
+    response = client.post("/quick-cert", data={**payload, **csrf(client)}, follow_redirects=False)
     assert response.status_code == 303
     location = response.headers["location"]
     assert location.startswith("/certificates/")

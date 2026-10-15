@@ -48,8 +48,8 @@ def _create_ca(db_session) -> CertificateAuthority:
     return create_root_ca(config, db_session)
 
 
-def _issue(client, db_session, ca_id: str) -> Certificate:
-    response = client.post(f"/cas/{ca_id}/issue", data=ISSUE_PAYLOAD, follow_redirects=False)
+def _issue(client, db_session, ca_id: str, csrf) -> Certificate:
+    response = client.post(f"/cas/{ca_id}/issue", data={**ISSUE_PAYLOAD, **csrf(client)}, follow_redirects=False)
     assert response.status_code == 303
     cert_id = response.headers["location"].rsplit("/", 1)[-1].split("?")[0]
     certificate = db_session.get(Certificate, cert_id)
@@ -74,11 +74,11 @@ def test_root_ca_key_is_sealed_with_row_aad(db_session):
         keystore.unseal_ca_key("other-id", value)
 
 
-def test_issue_from_sealed_ca_and_download_key(client, db_session):
+def test_issue_from_sealed_ca_and_download_key(client, db_session, csrf):
     update_app_settings(db_session, {"allow_key_download_policy": AllowKeyDownloadPolicy.ALL})
     ca = _create_ca(db_session)
 
-    certificate = _issue(client, db_session, ca.id)
+    certificate = _issue(client, db_session, ca.id, csrf)
 
     stored = certificate.stored_key_encrypted_pem
     assert stored is not None and stored.startswith("labca:v1:test-1:")
@@ -89,20 +89,20 @@ def test_issue_from_sealed_ca_and_download_key(client, db_session):
     assert _public_bytes(key.public_key()) == _public_bytes(loaded.public_key())
 
 
-def test_issue_fails_cleanly_when_ca_key_cannot_be_unsealed(client, db_session):
+def test_issue_fails_cleanly_when_ca_key_cannot_be_unsealed(client, db_session, csrf):
     ca = _create_ca(db_session)
     other = _create_ca(db_session)
     ca.key_encrypted_pem = other.key_encrypted_pem  # sealed for a different row
     db_session.commit()
 
-    response = client.post(f"/cas/{ca.id}/issue", data=ISSUE_PAYLOAD, follow_redirects=False)
+    response = client.post(f"/cas/{ca.id}/issue", data={**ISSUE_PAYLOAD, **csrf(client)}, follow_redirects=False)
 
     assert response.status_code == 400
     assert "could not be unsealed" in response.text
     assert "PRIVATE KEY" not in response.text
 
 
-def test_quick_cert_key_is_sealed(client, db_session):
+def test_quick_cert_key_is_sealed(client, db_session, csrf):
     payload = {
         "mode": "simple",
         "common_name": "quick-sealed.local",
@@ -119,7 +119,7 @@ def test_quick_cert_key_is_sealed(client, db_session):
         "store_in_labca": "true",
     }
 
-    response = client.post("/quick-cert", data=payload, follow_redirects=False)
+    response = client.post("/quick-cert", data={**payload, **csrf(client)}, follow_redirects=False)
 
     assert response.status_code == 303
     record = db_session.query(Certificate).one()
@@ -147,12 +147,12 @@ def test_quick_cert_without_key_stores_no_value(db_session):
     assert record.stored_key_encrypted_pem is None
 
 
-def test_swapped_key_columns_fail_closed(client, db_session):
+def test_swapped_key_columns_fail_closed(client, db_session, csrf):
     update_app_settings(db_session, {"allow_key_download_policy": AllowKeyDownloadPolicy.ALL})
     ca = _create_ca(db_session)
-    first = _issue(client, db_session, ca.id)
+    first = _issue(client, db_session, ca.id, csrf)
     second_payload = {**ISSUE_PAYLOAD, "common_name": "second.lab", "dns_sans": "second.lab"}
-    response = client.post(f"/cas/{ca.id}/issue", data=second_payload, follow_redirects=False)
+    response = client.post(f"/cas/{ca.id}/issue", data={**second_payload, **csrf(client)}, follow_redirects=False)
     second = db_session.get(Certificate, response.headers["location"].rsplit("/", 1)[-1].split("?")[0])
     assert second is not None
 
@@ -168,12 +168,12 @@ def test_swapped_key_columns_fail_closed(client, db_session):
     assert "PRIVATE KEY" not in result.text
 
 
-def test_swapped_key_fails_closed_through_api(db_session, client):
+def test_swapped_key_fails_closed_through_api(db_session, client, csrf):
     from app.services.api_token_service import create_token
 
     update_app_settings(db_session, {"allow_key_download_policy": AllowKeyDownloadPolicy.ALL})
     ca = _create_ca(db_session)
-    first = _issue(client, db_session, ca.id)
+    first = _issue(client, db_session, ca.id, csrf)
     first.stored_key_encrypted_pem = keystore.seal_cert_key("different-row", b"stolen")
     db_session.commit()
     _token, raw_token = create_token("t", {"read": True}, None, db_session)
@@ -187,9 +187,9 @@ def test_swapped_key_fails_closed_through_api(db_session, client):
     assert result.json()["detail"] == "Stored private key could not be decrypted."
 
 
-def test_setup_without_kek_returns_503(client, db_session, monkeypatch):
-    client.post("/setup/step1")
-    client.post("/setup/step2", data={"ca_source": "create"})
+def test_setup_without_kek_returns_503(client, db_session, monkeypatch, csrf):
+    client.post("/setup/step1", data=csrf(client))
+    client.post("/setup/step2", data={"ca_source": "create", **csrf(client)})
     form_data = {
         "name": "No Kek Root",
         "subject_cn": "No Kek Root",
@@ -207,7 +207,7 @@ def test_setup_without_kek_returns_503(client, db_session, monkeypatch):
         "download_cert": "true",
         "master_passphrase": "",
     }
-    summary = client.post("/setup/root", data=form_data)
+    summary = client.post("/setup/root", data={**form_data, **csrf(client)})
     match = re.search(r'name="config_payload" value="([^"]+)"', summary.text)
     assert match
 
@@ -218,7 +218,7 @@ def test_setup_without_kek_returns_503(client, db_session, monkeypatch):
 
     response = client.post(
         "/setup/complete",
-        data={"mode": "create", "config_payload": match.group(1)},
+        data={"mode": "create", "config_payload": match.group(1), **csrf(client)},
         follow_redirects=False,
     )
 

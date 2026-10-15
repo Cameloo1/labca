@@ -6,7 +6,6 @@ from typing import Any, Dict
 
 from fastapi import APIRouter, Depends, Request, status
 from fastapi.responses import HTMLResponse
-from fastapi.templating import Jinja2Templates
 from pydantic import ValidationError
 from sqlalchemy.orm import Session
 
@@ -14,9 +13,9 @@ from app.config import get_settings
 from app.dependencies import get_db
 from app.schemas import TokenPermissions, TokenPolicy
 from app.services.api_token_service import create_token, list_tokens
+from app.templating import templates
 
 router = APIRouter(tags=["api-ui"])
-templates = Jinja2Templates(directory="app/templates")
 
 
 @router.get("/api", response_class=HTMLResponse)
@@ -71,7 +70,7 @@ async def api_portal_create_token(
             policy=policy.model_dump() if policy else None,
         )
         created_token_value = raw_value
-        messages.append("API token created. Copy the value now—it will not be shown again.")
+        messages.append("API token created. Copy the value now. It will not be shown again.")
         form_values = _default_form_values()
         form_values["perm_issue"] = permissions["issue"]
         form_values["perm_read"] = permissions["read"]

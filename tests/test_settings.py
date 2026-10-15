@@ -77,7 +77,7 @@ def test_default_settings_created_if_missing(client, db_session):
     assert settings.default_validity_days == 365
 
 
-def test_update_settings_and_key_download_policy(client, db_session):
+def test_update_settings_and_key_download_policy(client, db_session, csrf):
     payload = {
         "app_name": "My Lab",
         "default_key_algorithm": "ECDSA",
@@ -87,7 +87,7 @@ def test_update_settings_and_key_download_policy(client, db_session):
         "allow_key_download_policy": "NONE",
         "require_login": "true",
     }
-    response = client.post("/settings", data=payload, follow_redirects=False)
+    response = client.post("/settings", data={**payload, **csrf(client)}, follow_redirects=False)
     assert response.status_code == 303
 
     settings = db_session.get(AppSettings, 1)

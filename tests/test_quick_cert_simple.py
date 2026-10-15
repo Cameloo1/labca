@@ -7,7 +7,7 @@ from cryptography import x509
 from cryptography.x509.oid import ExtendedKeyUsageOID, NameOID
 
 
-def test_quick_cert_simple_flow(client) -> None:
+def test_quick_cert_simple_flow(client, csrf) -> None:
     payload = {
         "common_name": "example.local",
         "dns_sans": "example.local",
@@ -32,7 +32,7 @@ def test_quick_cert_simple_flow(client) -> None:
         "label": "Example Lab",
     }
 
-    response = client.post("/quick-cert", data=payload)
+    response = client.post("/quick-cert", data={**payload, **csrf(client)})
     assert response.status_code == 200
     assert "example.local" in response.text
     assert "Download certificate" in response.text
@@ -60,7 +60,7 @@ def test_quick_cert_simple_flow(client) -> None:
     assert ExtendedKeyUsageOID.SERVER_AUTH in eku
 
 
-def test_quick_cert_client_tls_preset(client) -> None:
+def test_quick_cert_client_tls_preset(client, csrf) -> None:
     """Test client TLS preset includes clientAuth EKU."""
     payload = {
         "common_name": "client.example.local",
@@ -86,7 +86,7 @@ def test_quick_cert_client_tls_preset(client) -> None:
         "label": "Client Cert",
     }
 
-    response = client.post("/quick-cert", data=payload)
+    response = client.post("/quick-cert", data={**payload, **csrf(client)})
     assert response.status_code == 200
 
     cert_match = re.search(
@@ -102,7 +102,7 @@ def test_quick_cert_client_tls_preset(client) -> None:
     assert ExtendedKeyUsageOID.CLIENT_AUTH in eku
 
 
-def test_quick_cert_missing_cn_validation(client) -> None:
+def test_quick_cert_missing_cn_validation(client, csrf) -> None:
     """Test form validation: missing CN returns error."""
     payload = {
         "common_name": "",  # Missing CN
@@ -116,12 +116,12 @@ def test_quick_cert_missing_cn_validation(client) -> None:
         "output_pem_cert": "true",
     }
 
-    response = client.post("/quick-cert", data=payload)
+    response = client.post("/quick-cert", data={**payload, **csrf(client)})
     assert response.status_code == 400
     assert "common name" in response.text.lower() or "CN" in response.text
 
 
-def test_quick_cert_no_output_formats_validation(client) -> None:
+def test_quick_cert_no_output_formats_validation(client, csrf) -> None:
     """Test form validation: no output formats selected returns error."""
     payload = {
         "common_name": "test.local",
@@ -138,6 +138,6 @@ def test_quick_cert_no_output_formats_validation(client) -> None:
         "output_pfx": "",
     }
 
-    response = client.post("/quick-cert", data=payload)
+    response = client.post("/quick-cert", data={**payload, **csrf(client)})
     assert response.status_code == 400
     assert "output" in response.text.lower() or "format" in response.text.lower()

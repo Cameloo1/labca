@@ -54,7 +54,7 @@
               <td class="px-4 py-2">
                 <div class="flex flex-col">
                   <span class="font-medium text-gray-900">{{ log.actor_type.value }}</span>
-                  <span class="text-xs text-gray-500">{{ log.actor_id or "—" }}</span>
+                  <span class="text-xs text-gray-500">{{ log.actor_id or "-" }}</span>
                 </div>
               </td>
               <td class="px-4 py-2 text-gray-800 font-semibold">{{ log.action }}</td>
@@ -69,7 +69,7 @@
                   {{ log.status.value }}
                 </span>
               </td>
-              <td class="px-4 py-2 text-gray-600">{{ log.ip_address or "—" }}</td>
+              <td class="px-4 py-2 text-gray-600">{{ log.ip_address or "-" }}</td>
               <td class="px-4 py-2 text-gray-600">
                 <pre class="text-xs bg-gray-50 rounded p-2 overflow-auto">{{ log.details_json | tojson(indent=2) }}</pre>
               </td>

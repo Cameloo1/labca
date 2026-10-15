@@ -16,6 +16,14 @@ from app.config import get_settings
 from app.dependencies import get_db
 from app.main import app
 from app.models import Base
+from app.security.access_jwt import set_jwks_cache
+from app.security.csrf import (
+    CSRF_COOKIE_NAME,
+    CSRF_FORM_FIELD,
+    CSRF_HEADER,
+    make_token,
+    new_cookie_value,
+)
 from app.services import keystore
 from app.services.revocation_service import restore_post_revoke_hooks, snapshot_post_revoke_hooks
 from app.services.tokenreview import get_token_reviewer
@@ -120,3 +128,36 @@ def _reset_workload_state() -> Generator[None, None, None]:
     reset_rate_limiter()
     get_token_reviewer.cache_clear()
     yield
+
+
+@pytest.fixture
+def csrf():
+    """Return a function that gives the client a CSRF cookie and returns the matching form field."""
+
+    def _make(client) -> dict[str, str]:
+        value = new_cookie_value()
+        client.cookies.delete(CSRF_COOKIE_NAME)
+        client.cookies.set(CSRF_COOKIE_NAME, value)
+        return {CSRF_FORM_FIELD: make_token(value)}
+
+    return _make
+
+
+@pytest.fixture
+def csrf_headers():
+    """Same as csrf, but returns the token as the X-CSRF-Token header."""
+
+    def _make(client) -> dict[str, str]:
+        value = new_cookie_value()
+        client.cookies.delete(CSRF_COOKIE_NAME)
+        client.cookies.set(CSRF_COOKIE_NAME, value)
+        return {CSRF_HEADER: make_token(value)}
+
+    return _make
+
+
+@pytest.fixture(scope="function", autouse=True)
+def _reset_jwks_cache() -> Generator[None, None, None]:
+    """Tests that install a JWKS cache must not leak it into other tests."""
+    yield
+    set_jwks_cache(None)

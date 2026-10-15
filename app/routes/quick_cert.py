@@ -8,7 +8,6 @@ from urllib.parse import urlencode
 
 from fastapi import APIRouter, Depends, Request, Response, status
 from fastapi.responses import HTMLResponse, RedirectResponse
-from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
 from app.dependencies import get_db
@@ -18,10 +17,10 @@ from app.services.crypto_service import (
     generate_self_signed_cert_simple,
 )
 from app.services.quick_cert_service import save_quick_cert_to_db
+from app.templating import templates
 
 router = APIRouter(tags=["quick-cert"])
 
-templates = Jinja2Templates(directory="app/templates")
 
 VALIDITY_MIN_DAYS = 1
 VALIDITY_MAX_DAYS = 3650

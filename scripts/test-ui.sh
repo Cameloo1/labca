@@ -4,11 +4,12 @@
 # share a database. Each test node ID therefore gets its own temp SQLite database,
 # migrated to head, and its own uvicorn process.
 #
-# The pages load the Tailwind Play CDN script. When it loads, it injects CSS whose text
-# contains strings such as "line " that tests/ui/test_error_ui.py treats as traceback
-# markers. The browser therefore runs with an unreachable proxy for everything except
-# localhost, so the tests do not depend on internet access or on third-party CSS.
-# Keep it after WP-06 removes the CDN script: UI tests must never make network calls.
+# The browser runs with an unreachable proxy for everything except localhost, so UI
+# tests never make network calls and do not depend on internet access. The pages once
+# loaded the Tailwind Play CDN script, which injected CSS containing strings such as
+# "line " that tests/ui/test_error_ui.py treats as traceback markers. The CDN script is
+# gone, but keep the proxy rule: a stray third-party request must fail, not succeed.
+# The pages use the locally built app/static/css/app.css; run scripts/build-css.sh first.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 

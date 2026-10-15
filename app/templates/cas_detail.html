@@ -72,7 +72,7 @@
                 <td class="px-4 py-3 font-semibold text-gray-900">{{ cert.common_name }}</td>
                 <td class="px-4 py-3">{{ cert.type }}</td>
                 <td class="px-4 py-3">{{ cert.status }}</td>
-                <td class="px-4 py-3">{{ cert.not_after.strftime("%Y-%m-%d") if cert.not_after else "—" }}</td>
+                <td class="px-4 py-3">{{ cert.not_after.strftime("%Y-%m-%d") if cert.not_after else "-" }}</td>
               </tr>
             {% endfor %}
           </tbody>

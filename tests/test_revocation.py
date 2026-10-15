@@ -51,7 +51,7 @@ def _seed_certificate(db_session):
     return cert.id
 
 
-def test_revoke_certificate_flow(client, db_session):
+def test_revoke_certificate_flow(client, db_session, csrf):
     cert_id = _seed_certificate(db_session)
 
     form_page = client.get(f"/certificates/{cert_id}/revoke")
@@ -60,7 +60,7 @@ def test_revoke_certificate_flow(client, db_session):
 
     response = client.post(
         f"/certificates/{cert_id}/revoke",
-        data={"reason_code": "key_compromise", "notes": "api key leaked"},
+        data={"reason_code": "key_compromise", "notes": "api key leaked", **csrf(client)},
         follow_redirects=False,
     )
     assert response.status_code == 303

@@ -5,7 +5,6 @@ from typing import List, Optional
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Query, Request, Response
 from fastapi.responses import HTMLResponse, PlainTextResponse, RedirectResponse
-from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session, selectinload
 
 from app.dependencies import get_db
@@ -23,9 +22,9 @@ from app.services import keystore
 from app.services.audit_service import log_action
 from app.services.revocation_service import UI_REASON_TO_RFC5280, revoke_certificate
 from app.services.settings_service import get_app_settings
+from app.templating import templates
 
 router = APIRouter(prefix="/certificates", tags=["certificates"])
-templates = Jinja2Templates(directory="app/templates")
 
 QUICK_EXPIRY_FILTERS = (7, 30, 90)
 REVOCATION_REASONS = [

@@ -51,9 +51,11 @@
                 <a href="/cas/{{ profile.default_issuer_ca_id }}/issue?profile_id={{ profile.id }}" class="text-blue-600 hover:text-blue-500">Use</a>
                 <a href="/profiles/{{ profile.id }}/edit" class="text-gray-700 hover:text-gray-900">Edit</a>
                 <form method="post" action="/profiles/{{ profile.id }}/clone" class="inline">
+                  {{ csrf_input(request) }}
                   <button type="submit" class="text-gray-500 hover:text-gray-700">Clone</button>
                 </form>
                 <form method="post" action="/profiles/{{ profile.id }}/toggle-active" class="inline">
+                  {{ csrf_input(request) }}
                   <button type="submit" class="text-gray-500 hover:text-gray-700">{{ "Disable" if profile.active else "Enable" }}</button>
                 </form>
               </td>

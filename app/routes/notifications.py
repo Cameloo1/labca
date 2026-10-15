@@ -2,14 +2,13 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends, Request, status
 from fastapi.responses import HTMLResponse, RedirectResponse
-from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
 from app.dependencies import get_db
 from app.services.notification_service import ensure_default_rules, update_rules
+from app.templating import templates
 
 router = APIRouter(prefix="/notifications", tags=["notifications"])
-templates = Jinja2Templates(directory="app/templates")
 
 
 @router.get("", response_class=HTMLResponse)

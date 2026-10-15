@@ -237,14 +237,14 @@ def test_revoke_certificate_rejects_unknown_reason_code(client, db_session):
     assert row.revoked_at is None
 
 
-def test_ui_revoke_sets_rfc5280_code(client, db_session):
+def test_ui_revoke_sets_rfc5280_code(client, db_session, csrf):
     ca_id = _ca(db_session)
     _, headers = _token(db_session)
     cert_id = _issue(client, headers, ca_id)
 
     response = client.post(
         f"/certificates/{cert_id}/revoke",
-        data={"reason_code": "key_compromise", "notes": "lost laptop"},
+        data={"reason_code": "key_compromise", "notes": "lost laptop", **csrf(client)},
         follow_redirects=False,
     )
 

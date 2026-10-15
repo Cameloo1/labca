@@ -20,6 +20,7 @@
   {% endif %}
 
   <form method="post" class="bg-white shadow rounded-lg divide-y">
+    {{ csrf_input(request) }}
     {% for rule in rules %}
       <div class="p-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
