@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+import json
 import logging
 import re
-from typing import Optional, Sequence
+from datetime import datetime, timezone
+from typing import Any, Dict, Optional, Sequence
 
-from app.config import get_settings
+from app.config import Settings, get_settings
 
 settings = get_settings()
 
@@ -61,11 +63,52 @@ def install_redaction_filter(logger_names: Sequence[str] = ("", "uvicorn", "uvic
                 handler.addFilter(SecretRedactionFilter())
 
 
-logging.basicConfig(
-    level=getattr(logging, settings.LOG_LEVEL.upper(), logging.INFO),
-    format="%(asctime)s %(levelname)s [%(name)s] %(message)s",
-)
+TEXT_FORMAT = "%(asctime)s %(levelname)s [%(name)s] %(message)s"
+_LOGGER_NAMES = ("", "uvicorn", "uvicorn.error", "uvicorn.access")
+
+
+class JsonFormatter(logging.Formatter):
+    """Format each record as one JSON object per line, with secrets redacted."""
+
+    def format(self, record: logging.LogRecord) -> str:
+        created = datetime.fromtimestamp(record.created, tz=timezone.utc)
+        payload: Dict[str, Any] = {
+            "ts": created.isoformat(timespec="milliseconds").replace("+00:00", "Z"),
+            "level": record.levelname,
+            "logger": record.name,
+            "message": redact(record.getMessage()),
+        }
+        if record.exc_info and record.exc_info[0] is not None:
+            payload["exc_type"] = record.exc_info[0].__name__
+            payload["exc"] = redact(self.formatException(record.exc_info))
+        elif record.exc_text:
+            payload["exc"] = redact(record.exc_text)
+        for key, value in record.__dict__.items():
+            if key in _STANDARD_RECORD_ATTRS or key in payload:
+                continue
+            if isinstance(value, str):
+                value = redact(value)
+            try:
+                json.dumps(value)
+            except (TypeError, ValueError):
+                value = redact(str(value))
+            payload[key] = value
+        return json.dumps(payload, ensure_ascii=False)
+
+
+def configure_logging(app_settings: Settings) -> None:
+    """Apply the configured format to the root and uvicorn handlers, then install redaction. Idempotent."""
+    level = getattr(logging, app_settings.LOG_LEVEL.upper(), logging.INFO)
+    if not logging.getLogger().handlers:
+        logging.basicConfig(level=level)
+    formatter: logging.Formatter
+    formatter = JsonFormatter() if app_settings.LOG_FORMAT == "json" else logging.Formatter(TEXT_FORMAT)
+    for name in _LOGGER_NAMES:
+        for handler in logging.getLogger(name).handlers:
+            handler.setFormatter(formatter)
+    install_redaction_filter(_LOGGER_NAMES)
+
+
+configure_logging(settings)
 
 logger = logging.getLogger("labca")
-
-install_redaction_filter()

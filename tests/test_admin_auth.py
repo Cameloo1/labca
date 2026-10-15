@@ -300,7 +300,16 @@ def test_startup_dev_allows_mode_none():
 
 def test_startup_prod_accepts_localhost_only():
     run_startup_checks(
-        Settings(_env_file=None, ENV="prod", ADMIN_AUTH_MODE="localhost_only"),
+        Settings(
+            _env_file=None,
+            ENV="prod",
+            ADMIN_AUTH_MODE="localhost_only",
+            # the other prod startup rules need safe values too
+            SECRET_KEY="x" * 40,
+            ENABLE_API_DOCS=False,
+            PUBLIC_BASE_URL="https://labca.example.test",
+            DATABASE_URL="sqlite:////data/labca.db",
+        ),
         KeyRing({"k": bytes(32)}, active_kek_id="k"),
     )
 

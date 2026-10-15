@@ -1,14 +1,18 @@
 from contextlib import asynccontextmanager
-from typing import AsyncIterator
+from typing import AsyncIterator, Optional
 
 from fastapi import Depends, FastAPI, HTTPException
+from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
+from sqlalchemy.orm import Session
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from .config import get_settings
+from .db import get_db
 from .error_handlers import http_exception_handler, server_exception_handler
-from .logging_config import install_redaction_filter
+from .logging_config import configure_logging
 from .middleware import RequestLoggingMiddleware
+from .readiness import readiness_reasons
 from .routes import api as api_routes
 from .routes import api_ui as api_ui_routes
 from .routes import audit as audit_routes
@@ -26,16 +30,18 @@ from .routes import workload as workload_routes
 from .security.admin_auth import AdminAuthMiddleware
 from .security.csrf import CsrfCookieMiddleware, csrf_protect
 from .security.headers import SecurityHeadersMiddleware
+from .services import keystore
+from .services.keystore import KeyRing
 from .startup import run_startup_checks
 
 settings = get_settings()
 
-docs_enabled = not (settings.ENV.lower() == "prod" and not settings.ENABLE_API_DOCS)
+docs_enabled = settings.ENABLE_API_DOCS
 
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
-    install_redaction_filter()
+    configure_logging(get_settings())
     run_startup_checks(get_settings())
     yield
 
@@ -69,6 +75,19 @@ app.mount("/static", StaticFiles(directory="app/static"), name="static")
 @app.get("/health")
 def health() -> dict:
     return {"status": "ok"}
+
+
+@app.get("/ready")
+def ready(db: Session = Depends(get_db)) -> JSONResponse:
+    try:
+        keyring: Optional[KeyRing] = keystore.get_keyring()
+    except keystore.KeystoreError:
+        keyring = None
+    reasons = readiness_reasons(db, get_settings(), keyring)
+    headers = {"Cache-Control": "no-store"}
+    if reasons:
+        return JSONResponse({"status": "not_ready", "reasons": reasons}, status_code=503, headers=headers)
+    return JSONResponse({"status": "ready"}, headers=headers)
 
 
 admin_deps = [Depends(csrf_protect)]

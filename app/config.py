@@ -32,6 +32,7 @@ class Settings(BaseSettings):
     SECRET_KEY: str = Field(default="CHANGE_ME", description="Application secret key")
     API_TOKEN_CREATION_SECRET: Optional[str] = Field(default=None, description="Required to mint API tokens")
     LOG_LEVEL: str = Field(default="INFO", description="Python logging level")
+    LOG_FORMAT: Literal["text", "json"] = Field(default="text", description="Log format: text or json")
     ENABLE_API_DOCS: bool = Field(default=True, description="Enable Swagger/ReDoc endpoints")
 
     LABCA_KEK_DIR: Optional[str] = Field(default=None, description="Directory of KEK files (prod)")
