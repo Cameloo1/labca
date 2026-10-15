@@ -79,7 +79,10 @@ def test_token_for_another_cookie_is_forbidden(client):
 def test_tampered_token_is_forbidden(client, csrf):
     fields = csrf(client)
     token = fields[CSRF_FORM_FIELD]
-    flipped = token[:-1] + ("A" if token[-1] != "A" else "B")
+    # Change the first signature character: all 6 of its bits are significant. The last
+    # character also holds base64 padding bits, so changing it can decode to the same bytes.
+    head, _, signature = token.rpartition(".")
+    flipped = f"{head}.{'A' if signature[0] != 'A' else 'B'}{signature[1:]}"
     for bad in (flipped, token + "x", "garbage", token.split(".")[0]):
         response = client.post("/setup/step1", data={CSRF_FORM_FIELD: bad}, follow_redirects=False)
         assert response.status_code == 403
