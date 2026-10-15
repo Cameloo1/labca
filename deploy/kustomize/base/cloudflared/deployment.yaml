@@ -1,0 +1,97 @@
+# A dedicated ServiceAccount (no token) avoids the namespace default account.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: cloudflared
+  namespace: cloudflared
+  labels:
+    app.kubernetes.io/name: cloudflared
+automountServiceAccountToken: false
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cloudflared
+  namespace: cloudflared
+  labels:
+    app.kubernetes.io/name: cloudflared
+spec:
+  replicas: 1
+  revisionHistoryLimit: 3
+  strategy:
+    type: RollingUpdate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: cloudflared
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: cloudflared
+    spec:
+      serviceAccountName: cloudflared
+      automountServiceAccountToken: false
+      enableServiceLinks: false
+      restartPolicy: Always
+      dnsConfig:
+        options:
+          - name: ndots
+            value: "2"
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        runAsGroup: 65532
+        fsGroup: 65532
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: cloudflared
+          image: cloudflare/cloudflared:2026.10.0@sha256:9b49eed8f62806d5d45ddf59ecefb5710429598ea6d3fcccd2af938f621b2b07
+          imagePullPolicy: IfNotPresent
+          # The image entrypoint is "cloudflared --no-autoupdate".
+          args: ["tunnel", "--no-autoupdate", "--metrics", "0.0.0.0:2000", "run"]
+          # The token is read from a file so it never appears in the process
+          # environment. The Secret is created out of band, never in these manifests.
+          env:
+            - name: TUNNEL_TOKEN_FILE
+              value: /run/secrets/cloudflared/token
+          volumeMounts:
+            - name: tunnel-token
+              mountPath: /run/secrets/cloudflared
+              readOnly: true
+          ports:
+            - name: metrics
+              containerPort: 2000
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: metrics
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /ready
+              port: metrics
+            periodSeconds: 20
+            timeoutSeconds: 3
+            failureThreshold: 6
+          securityContext:
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
+            runAsNonRoot: true
+            capabilities:
+              drop: [ALL]
+          resources:
+            requests:
+              cpu: 20m
+              memory: 48Mi
+            limits:
+              cpu: 200m
+              memory: 192Mi
+      volumes:
+        # defaultMode 0400 plus fsGroup: the kubelet makes the file group-readable
+        # for GID 65532, which the non-root container needs.
+        - name: tunnel-token
+          secret:
+            secretName: cloudflared-token
+            defaultMode: 0400

@@ -1,0 +1,164 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny
+  namespace: mtls-demo
+  labels:
+    app.kubernetes.io/name: default-deny
+spec:
+  podSelector: {}
+  policyTypes: [Ingress, Egress]
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: demo-server
+  namespace: mtls-demo
+  labels:
+    app.kubernetes.io/name: demo-server
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: demo-server
+  policyTypes: [Ingress, Egress]
+  ingress:
+    - from:
+        - podSelector:
+            matchExpressions:
+              - key: app.kubernetes.io/name
+                operator: In
+                values: [demo-client, mtls-verifier]
+      ports:
+        - protocol: TCP
+          port: 8443
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: mtls-verifier
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: traefik
+      ports:
+        - protocol: TCP
+          port: 8080
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: labca-system
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: labca
+      ports:
+        - protocol: TCP
+          port: 8000
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: demo-client
+  namespace: mtls-demo
+  labels:
+    app.kubernetes.io/name: demo-client
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: demo-client
+  policyTypes: [Egress]
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: labca-system
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: labca
+      ports:
+        - protocol: TCP
+          port: 8000
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: demo-server
+      ports:
+        - protocol: TCP
+          port: 8443
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: mtls-verifier
+  namespace: mtls-demo
+  labels:
+    app.kubernetes.io/name: mtls-verifier
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: mtls-verifier
+  policyTypes: [Egress]
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: labca-system
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: labca
+      ports:
+        - protocol: TCP
+          port: 8000
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: demo-server
+      ports:
+        - protocol: TCP
+          port: 8443
+        - protocol: TCP
+          port: 8080
+    # Kubernetes API. k3s evaluates NetworkPolicy after kube-proxy DNAT, so traffic to the kubernetes Service (10.43.0.1:443) is matched as <node IP>:6443. A rule for 10.43.0.1/32:443 never matches (checked on k3s v1.35.5).
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+      ports:
+        - protocol: TCP
+          port: 6443

@@ -1,0 +1,77 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - ../../base
+
+# No tunnel in CI.
+patches:
+  - target:
+      kind: Deployment
+      name: cloudflared
+    patch: |-
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: cloudflared
+        namespace: cloudflared
+      $patch: delete
+  # The NetworkPolicies of the removed workload would match no pods.
+  - target:
+      kind: NetworkPolicy
+      name: cloudflared
+    patch: |-
+      apiVersion: networking.k8s.io/v1
+      kind: NetworkPolicy
+      metadata:
+        name: cloudflared
+        namespace: cloudflared
+      $patch: delete
+  - target:
+      kind: NetworkPolicy
+      name: default-deny
+      namespace: cloudflared
+    patch: |-
+      apiVersion: networking.k8s.io/v1
+      kind: NetworkPolicy
+      metadata:
+        name: default-deny
+        namespace: cloudflared
+      $patch: delete
+  - target:
+      kind: Ingress
+      name: labca-pki
+    patch: |-
+      - op: replace
+        path: /spec/rules/0/host
+        value: labca.e2e.test
+  - target:
+      kind: Ingress
+      name: labca-status
+    patch: |-
+      - op: replace
+        path: /spec/rules/0/host
+        value: labca.e2e.test
+
+images:
+  - name: ghcr.io/cameloo1/labca
+    newName: labca
+    newTag: e2e
+  - name: ghcr.io/cameloo1/labca-mtls-demo
+    newName: labca-mtls-demo
+    newTag: e2e
+
+configMapGenerator:
+  - name: labca-config
+    namespace: labca-system
+    behavior: merge
+    literals:
+      - PUBLIC_BASE_URL=https://labca.e2e.test
+      - WORKLOAD_TRUST_DOMAIN=labca.e2e.test
+  - name: mtls-demo-ids
+    namespace: mtls-demo
+    behavior: merge
+    literals:
+      - ALLOWED_CLIENT_IDS=spiffe://labca.e2e.test/ns/mtls-demo/sa/demo-client
+      - EXPECTED_SERVER_ID=spiffe://labca.e2e.test/ns/mtls-demo/sa/demo-server
+      - DEMO_CLIENT_ID=spiffe://labca.e2e.test/ns/mtls-demo/sa/demo-client

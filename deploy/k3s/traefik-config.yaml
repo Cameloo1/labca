@@ -1,0 +1,11 @@
+# Not part of any overlay. k3s reads it from its server manifests directory;
+# the e2e script applies it with kubectl.
+apiVersion: helm.cattle.io/v1
+kind: HelmChartConfig
+metadata:
+  name: traefik
+  namespace: kube-system
+spec:
+  valuesContent: |-
+    service:
+      type: ClusterIP

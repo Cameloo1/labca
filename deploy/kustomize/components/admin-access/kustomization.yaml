@@ -1,0 +1,15 @@
+# Optional component. Neither committed overlay includes it, so without
+# Cloudflare Access no admin hostname is routed. The deploy-time overlay
+# (Phase 6) supplies CF_ACCESS_TEAM_DOMAIN, ADMIN_EMAILS, and the real host.
+apiVersion: kustomize.config.k8s.io/v1alpha1
+kind: Component
+
+resources:
+  - ingress.yaml
+
+configMapGenerator:
+  - name: labca-config
+    namespace: labca-system
+    behavior: merge
+    literals:
+      - ADMIN_AUTH_MODE=cloudflare_access

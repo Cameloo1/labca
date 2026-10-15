@@ -1,0 +1,104 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: mtls-verifier
+  namespace: mtls-demo
+  labels:
+    app.kubernetes.io/name: mtls-verifier
+  annotations:
+    ignore-check.kube-linter.io/restart-policy: "A Job pod runs to completion, so restartPolicy Never is correct; the Job activeDeadlineSeconds bounds it."
+    ignore-check.kube-linter.io/no-liveness-probe: "Short-lived Job container with no listening port."
+    ignore-check.kube-linter.io/no-readiness-probe: "Short-lived Job container with no listening port."
+spec:
+  schedule: "*/10 * * * *"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  startingDeadlineSeconds: 300
+  jobTemplate:
+    metadata:
+      labels:
+        app.kubernetes.io/name: mtls-verifier
+    spec:
+      backoffLimit: 0
+      activeDeadlineSeconds: 300
+      template:
+        metadata:
+          labels:
+            app.kubernetes.io/name: mtls-verifier
+        spec:
+          restartPolicy: Never
+          serviceAccountName: mtls-verifier
+          automountServiceAccountToken: false
+          enableServiceLinks: false
+          dnsConfig:
+            options:
+              - name: ndots
+                value: "2"
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 65532
+            runAsGroup: 65532
+            fsGroup: 65532
+            seccompProfile:
+              type: RuntimeDefault
+          containers:
+            - name: mtls-verifier
+              image: ghcr.io/cameloo1/labca-mtls-demo:1.0.0
+              imagePullPolicy: IfNotPresent
+              args: ["verifier"]
+              envFrom:
+                - configMapRef:
+                    name: mtls-demo-ids
+              env:
+                - name: LOG_LEVEL
+                  value: info
+                - name: POD_NAMESPACE
+                  valueFrom:
+                    fieldRef:
+                      fieldPath: metadata.namespace
+              securityContext:
+                readOnlyRootFilesystem: true
+                allowPrivilegeEscalation: false
+                runAsNonRoot: true
+                capabilities:
+                  drop: [ALL]
+              resources:
+                requests:
+                  cpu: 20m
+                  memory: 32Mi
+                limits:
+                  cpu: 200m
+                  memory: 128Mi
+              volumeMounts:
+                - name: labca-token
+                  mountPath: /var/run/secrets/labca
+                  readOnly: true
+                - name: trust
+                  mountPath: /etc/labca/trust
+                  readOnly: true
+                - name: kube-api
+                  mountPath: /var/run/secrets/kube-api
+                  readOnly: true
+          volumes:
+            - name: labca-token
+              projected:
+                sources:
+                  - serviceAccountToken:
+                      path: token
+                      audience: labca
+                      expirationSeconds: 600
+            - name: trust
+              configMap:
+                name: labca-trust-bundle
+            - name: kube-api
+              projected:
+                sources:
+                  - serviceAccountToken:
+                      path: token
+                      expirationSeconds: 600
+                  - configMap:
+                      name: kube-root-ca.crt
+                      items:
+                        - key: ca.crt
+                          path: ca.crt

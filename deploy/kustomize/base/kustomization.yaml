@@ -1,0 +1,68 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - namespaces.yaml
+  - labca/serviceaccount.yaml
+  - labca/rbac.yaml
+  - labca/pvc.yaml
+  - labca/deployment.yaml
+  - labca/service.yaml
+  - labca/backup-cronjob.yaml
+  - labca/ingress.yaml
+  - mtls-demo/serviceaccounts.yaml
+  - mtls-demo/rbac.yaml
+  - mtls-demo/configmaps.yaml
+  - mtls-demo/demo-server.yaml
+  - mtls-demo/demo-client.yaml
+  - mtls-demo/verifier-cronjob.yaml
+  - mtls-demo/ingress.yaml
+  - cloudflared/deployment.yaml
+  - networkpolicies/labca-system.yaml
+  - networkpolicies/mtls-demo.yaml
+  - networkpolicies/cloudflared.yaml
+
+# part-of goes on object metadata and pod templates only, never on selectors.
+labels:
+  - pairs:
+      app.kubernetes.io/part-of: labca
+    includeSelectors: false
+    includeTemplates: true
+
+configMapGenerator:
+  # Overlays add PUBLIC_BASE_URL and WORKLOAD_TRUST_DOMAIN with behavior: merge.
+  - name: labca-config
+    namespace: labca-system
+    options:
+      labels:
+        app.kubernetes.io/name: labca
+    literals:
+      - ENV=prod
+      - DATABASE_URL=sqlite:////data/labca.db
+      - LABCA_KEK_DIR=/run/secrets/labca-kek
+      - LABCA_ACTIVE_KEK_ID=kek-2026a
+      - ENABLE_API_DOCS=false
+      - LOG_FORMAT=json
+      - LOG_LEVEL=INFO
+      - ADMIN_AUTH_MODE=localhost_only
+      - PKI_STATIC_DIR=/etc/labca/pki-static
+      - WORKLOAD_ISSUANCE_ENABLED=true
+      - WORKLOAD_ISSUER_CA_NAME=LabCA Workload Issuing CA 1
+      - WORKLOAD_TOKEN_AUDIENCE=labca
+      - WORKLOAD_ALLOWLIST=mtls-demo/demo-server,mtls-demo/demo-client,mtls-demo/mtls-verifier
+      - WORKLOAD_CERT_TTL_MINUTES=60
+      - KUBE_SA_TOKEN_FILE=/var/run/secrets/kube-api/token
+      - KUBE_CA_FILE=/var/run/secrets/kube-api/ca.crt
+      # k3s pod CIDR, where Traefik runs. Never "*".
+      - FORWARDED_ALLOW_IPS=10.42.0.0/16
+      - CRL_VALIDITY_HOURS=24
+  # Overlays replace the trust domain with behavior: merge.
+  - name: mtls-demo-ids
+    namespace: mtls-demo
+    options:
+      labels:
+        app.kubernetes.io/name: mtls-demo
+    literals:
+      - ALLOWED_CLIENT_IDS=spiffe://labca.example.invalid/ns/mtls-demo/sa/demo-client
+      - EXPECTED_SERVER_ID=spiffe://labca.example.invalid/ns/mtls-demo/sa/demo-server
+      - DEMO_CLIENT_ID=spiffe://labca.example.invalid/ns/mtls-demo/sa/demo-client

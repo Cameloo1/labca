@@ -1,0 +1,110 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: labca-admin
+  namespace: labca-system
+  labels:
+    app.kubernetes.io/name: labca
+    app.kubernetes.io/part-of: labca
+  annotations:
+    traefik.ingress.kubernetes.io/router.entrypoints: web
+spec:
+  ingressClassName: traefik
+  rules:
+    - host: labca-admin.example.invalid
+      http:
+        # The admin UI paths are listed one by one because a / Prefix path would also
+        # route /api/v1, which is cluster-internal. tests/test_ingress_paths.py checks
+        # this list against the application routes.
+        paths:
+          - path: /
+            pathType: Exact
+            backend:
+              service:
+                name: labca
+                port:
+                  number: 8000
+          - path: /api
+            pathType: Exact
+            backend:
+              service:
+                name: labca
+                port:
+                  number: 8000
+          - path: /audit
+            pathType: Prefix
+            backend:
+              service:
+                name: labca
+                port:
+                  number: 8000
+          - path: /cas
+            pathType: Prefix
+            backend:
+              service:
+                name: labca
+                port:
+                  number: 8000
+          - path: /certificates
+            pathType: Prefix
+            backend:
+              service:
+                name: labca
+                port:
+                  number: 8000
+          - path: /help
+            pathType: Prefix
+            backend:
+              service:
+                name: labca
+                port:
+                  number: 8000
+          - path: /notifications
+            pathType: Prefix
+            backend:
+              service:
+                name: labca
+                port:
+                  number: 8000
+          - path: /pki
+            pathType: Prefix
+            backend:
+              service:
+                name: labca
+                port:
+                  number: 8000
+          - path: /profiles
+            pathType: Prefix
+            backend:
+              service:
+                name: labca
+                port:
+                  number: 8000
+          - path: /quick-cert
+            pathType: Prefix
+            backend:
+              service:
+                name: labca
+                port:
+                  number: 8000
+          - path: /settings
+            pathType: Prefix
+            backend:
+              service:
+                name: labca
+                port:
+                  number: 8000
+          - path: /setup
+            pathType: Prefix
+            backend:
+              service:
+                name: labca
+                port:
+                  number: 8000
+          - path: /static
+            pathType: Prefix
+            backend:
+              service:
+                name: labca
+                port:
+                  number: 8000

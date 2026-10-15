@@ -1,0 +1,100 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: demo-client
+  namespace: mtls-demo
+  labels:
+    app.kubernetes.io/name: demo-client
+spec:
+  replicas: 1
+  revisionHistoryLimit: 3
+  strategy:
+    type: RollingUpdate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: demo-client
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: demo-client
+    spec:
+      serviceAccountName: demo-client
+      automountServiceAccountToken: false
+      enableServiceLinks: false
+      restartPolicy: Always
+      dnsConfig:
+        options:
+          - name: ndots
+            value: "2"
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        runAsGroup: 65532
+        fsGroup: 65532
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: demo-client
+          image: ghcr.io/cameloo1/labca-mtls-demo:1.0.0
+          imagePullPolicy: IfNotPresent
+          args: ["client"]
+          envFrom:
+            - configMapRef:
+                name: mtls-demo-ids
+          env:
+            - name: LOG_LEVEL
+              value: info
+          ports:
+            - name: health
+              containerPort: 8081
+          # Liveness and startup only check the socket, so a LabCA outage
+          # (identity not ready, /healthz 503) does not restart the client.
+          startupProbe:
+            tcpSocket:
+              port: health
+            periodSeconds: 2
+            failureThreshold: 30
+          livenessProbe:
+            tcpSocket:
+              port: health
+            periodSeconds: 20
+            timeoutSeconds: 3
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: health
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+          securityContext:
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
+            runAsNonRoot: true
+            capabilities:
+              drop: [ALL]
+          resources:
+            requests:
+              cpu: 10m
+              memory: 24Mi
+            limits:
+              cpu: 200m
+              memory: 96Mi
+          volumeMounts:
+            - name: labca-token
+              mountPath: /var/run/secrets/labca
+              readOnly: true
+            - name: trust
+              mountPath: /etc/labca/trust
+              readOnly: true
+      volumes:
+        - name: labca-token
+          projected:
+            sources:
+              - serviceAccountToken:
+                  path: token
+                  audience: labca
+                  expirationSeconds: 600
+        - name: trust
+          configMap:
+            name: labca-trust-bundle

@@ -1,0 +1,14 @@
+checks:
+  addAllBuiltIn: true
+  exclude:
+    # Single-node lab cluster with SQLite on a ReadWriteOnce volume: one replica by design.
+    - minimum-three-replicas
+    # Single-node cluster: there is no second node to express affinity for.
+    - no-node-affinity
+    # Ownership labels and annotations would need a real person's email, and the manifests must not carry one.
+    - required-label-owner
+    - required-annotation-email
+# Narrower exceptions are annotations on the single object they apply to
+# (ignore-check.kube-linter.io/<check>), each with its reason:
+#   labca Deployment: no-rolling-update-strategy (Recreate for SQLite)
+#   labca-backup and mtls-verifier CronJobs: restart-policy, no-liveness-probe, no-readiness-probe
