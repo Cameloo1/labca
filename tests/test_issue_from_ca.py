@@ -31,7 +31,7 @@ def test_issue_page_loads(client, db_session):
     assert "Test Root" in response.text
 
 
-def test_issue_certificate_from_ca(client, db_session):
+def test_issue_certificate_from_ca(client, db_session, csrf):
     ca_id = _create_ca(db_session)
     payload = {
         "common_name": "leaf.lab",
@@ -52,7 +52,7 @@ def test_issue_certificate_from_ca(client, db_session):
         "environment_tags": "dev",
         "owner": "qa",
     }
-    response = client.post(f"/cas/{ca_id}/issue", data=payload, follow_redirects=False)
+    response = client.post(f"/cas/{ca_id}/issue", data={**payload, **csrf(client)}, follow_redirects=False)
     assert response.status_code == 303
     cert_url = response.headers["location"]
     assert cert_url.startswith("/certificates/")
@@ -83,7 +83,7 @@ def test_issue_certificate_from_ca(client, db_session):
     assert cert_not_after <= ca_not_after
 
 
-def test_issue_certificate_rejects_long_validity(client, db_session):
+def test_issue_certificate_rejects_long_validity(client, db_session, csrf):
     ca_id = _create_ca(db_session)
     payload = {
         "common_name": "too-long.lab",
@@ -99,6 +99,6 @@ def test_issue_certificate_rejects_long_validity(client, db_session):
         "environment_tags": "",
         "owner": "",
     }
-    response = client.post(f"/cas/{ca_id}/issue", data=payload)
+    response = client.post(f"/cas/{ca_id}/issue", data={**payload, **csrf(client)})
     assert response.status_code == 400
     assert "exceeds issuer CA validity" in response.text

@@ -1,0 +1,16 @@
+# mtls-status is written by the verifier CronJob through the API (merge patch
+# of the results.json key). The manifest declares an empty data map and never
+# sets results.json, so applying the manifests again, with client-side or
+# server-side apply, keeps the field the verifier wrote.
+#
+# The mtls-demo-ids ConfigMap is generated in ../kustomization.yaml. The
+# labca-trust-bundle ConfigMap is created by the deploy and e2e scripts from
+# the ceremony root, not by these manifests.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mtls-status
+  namespace: mtls-demo
+  labels:
+    app.kubernetes.io/name: demo-server
+data: {}

@@ -57,8 +57,11 @@ warn_redundant_casts = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-markers = ["ui: Playwright browser tests that need a running LabCA server (run with scripts/test-ui.sh)"]
-addopts = "-m 'not ui'"
+markers = [
+  "ui: Playwright browser tests that need a running LabCA server (run with scripts/test-ui.sh)",
+  "manifests: checks rendered Kubernetes manifests (run by scripts/check-manifests.sh)",
+]
+addopts = "-m 'not ui and not manifests'"
 
 [tool.coverage.run]
 source = ["app"]

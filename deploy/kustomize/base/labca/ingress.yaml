@@ -1,0 +1,23 @@
+# Only /pki is routed. /api/v1 is never exposed through an Ingress.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: labca-pki
+  namespace: labca-system
+  labels:
+    app.kubernetes.io/name: labca
+  annotations:
+    traefik.ingress.kubernetes.io/router.entrypoints: web
+spec:
+  ingressClassName: traefik
+  rules:
+    - host: labca.example.invalid
+      http:
+        paths:
+          - path: /pki
+            pathType: Prefix
+            backend:
+              service:
+                name: labca
+                port:
+                  number: 8000

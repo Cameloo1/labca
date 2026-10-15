@@ -17,7 +17,7 @@ def _extract_certificate(response_text: str) -> x509.Certificate:
     return x509.load_pem_x509_certificate(cert_pem)
 
 
-def test_advanced_ca_certificate_has_basic_constraints_and_key_usage(client) -> None:
+def test_advanced_ca_certificate_has_basic_constraints_and_key_usage(client, csrf) -> None:
     payload = {
         "mode": "advanced",
         "common_name": "LabCA Root",
@@ -38,7 +38,7 @@ def test_advanced_ca_certificate_has_basic_constraints_and_key_usage(client) -> 
         "subject_key_identifier": "auto",
         "authority_key_identifier": "match_subject",
     }
-    response = client.post("/quick-cert", data=payload)
+    response = client.post("/quick-cert", data={**payload, **csrf(client)})
     assert response.status_code == 200
     certificate = _extract_certificate(response.text)
 
@@ -51,7 +51,7 @@ def test_advanced_ca_certificate_has_basic_constraints_and_key_usage(client) -> 
     assert key_usage.crl_sign
 
 
-def test_advanced_custom_eku_and_oid(client) -> None:
+def test_advanced_custom_eku_and_oid(client, csrf) -> None:
     payload = {
         "mode": "advanced",
         "common_name": "advanced.leaf.local",
@@ -72,7 +72,7 @@ def test_advanced_custom_eku_and_oid(client) -> None:
         "subject_key_identifier": "auto",
         "authority_key_identifier": "omit",
     }
-    response = client.post("/quick-cert", data=payload)
+    response = client.post("/quick-cert", data={**payload, **csrf(client)})
     assert response.status_code == 200
     certificate = _extract_certificate(response.text)
 
@@ -81,7 +81,7 @@ def test_advanced_custom_eku_and_oid(client) -> None:
     assert ObjectIdentifier("1.2.3.4.5") in eku
 
 
-def test_invalid_ca_without_key_cert_sign_is_rejected(client) -> None:
+def test_invalid_ca_without_key_cert_sign_is_rejected(client, csrf) -> None:
     payload = {
         "mode": "advanced",
         "common_name": "Bad CA",
@@ -90,6 +90,6 @@ def test_invalid_ca_without_key_cert_sign_is_rejected(client) -> None:
         "is_ca": "true",
         "key_usage_key_cert_sign": "",
     }
-    response = client.post("/quick-cert", data=payload)
+    response = client.post("/quick-cert", data={**payload, **csrf(client)})
     assert response.status_code == 400
     assert "Key Cert Sign" in response.text

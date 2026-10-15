@@ -3,6 +3,7 @@ from .audit import ActorType, AuditLog, AuditStatus
 from .base import Base, TimestampMixin
 from .ca import CASourceTypeEnum, CAStatusEnum, CertificateAuthority
 from .certificate import Certificate, CertificateStatusEnum, CertificateTypeEnum
+from .crl import CrlRecord
 from .notification import NotificationLog, NotificationRule
 from .profile import Profile, ProfileType
 from .settings import AllowKeyDownloadPolicy, AppSettings
@@ -14,6 +15,7 @@ __all__ = [
     "CAStatusEnum",
     "CertificateAuthority",
     "Certificate",
+    "CrlRecord",
     "CertificateStatusEnum",
     "CertificateTypeEnum",
     "Profile",

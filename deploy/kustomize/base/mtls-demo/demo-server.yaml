@@ -1,0 +1,127 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: demo-server
+  namespace: mtls-demo
+  labels:
+    app.kubernetes.io/name: demo-server
+spec:
+  replicas: 1
+  revisionHistoryLimit: 3
+  strategy:
+    type: RollingUpdate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: demo-server
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: demo-server
+    spec:
+      serviceAccountName: demo-server
+      automountServiceAccountToken: false
+      enableServiceLinks: false
+      restartPolicy: Always
+      dnsConfig:
+        options:
+          - name: ndots
+            value: "2"
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        runAsGroup: 65532
+        fsGroup: 65532
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: demo-server
+          image: ghcr.io/cameloo1/labca-mtls-demo:1.0.0
+          imagePullPolicy: IfNotPresent
+          args: ["server"]
+          envFrom:
+            - configMapRef:
+                name: mtls-demo-ids
+          env:
+            - name: LOG_LEVEL
+              value: info
+          ports:
+            - name: mtls
+              containerPort: 8443
+            - name: status
+              containerPort: 8080
+          startupProbe:
+            httpGet:
+              path: /healthz
+              port: status
+            periodSeconds: 2
+            failureThreshold: 30
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: status
+            periodSeconds: 20
+            timeoutSeconds: 3
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: status
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+          securityContext:
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
+            runAsNonRoot: true
+            capabilities:
+              drop: [ALL]
+          resources:
+            requests:
+              cpu: 10m
+              memory: 24Mi
+            limits:
+              cpu: 200m
+              memory: 96Mi
+          volumeMounts:
+            - name: labca-token
+              mountPath: /var/run/secrets/labca
+              readOnly: true
+            - name: trust
+              mountPath: /etc/labca/trust
+              readOnly: true
+            - name: mtls-status
+              mountPath: /etc/mtls-status
+              readOnly: true
+      volumes:
+        - name: labca-token
+          projected:
+            sources:
+              - serviceAccountToken:
+                  path: token
+                  audience: labca
+                  expirationSeconds: 600
+        - name: trust
+          configMap:
+            name: labca-trust-bundle
+        - name: mtls-status
+          configMap:
+            name: mtls-status
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: demo-server
+  namespace: mtls-demo
+  labels:
+    app.kubernetes.io/name: demo-server
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: demo-server
+  ports:
+    - name: mtls
+      port: 8443
+      targetPort: mtls
+    - name: status
+      port: 8080
+      targetPort: status

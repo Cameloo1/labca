@@ -1,0 +1,129 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: labca-backup
+  namespace: labca-system
+  labels:
+    app.kubernetes.io/name: labca-backup
+  annotations:
+    ignore-check.kube-linter.io/restart-policy: "A Job pod runs to completion, so restartPolicy Never is correct; the Job backoffLimit handles retries."
+    ignore-check.kube-linter.io/no-liveness-probe: "Short-lived Job container with no listening port."
+    ignore-check.kube-linter.io/no-readiness-probe: "Short-lived Job container with no listening port."
+spec:
+  schedule: "17 3 * * *"
+  timeZone: Etc/UTC
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  startingDeadlineSeconds: 3600
+  jobTemplate:
+    metadata:
+      labels:
+        app.kubernetes.io/name: labca-backup
+    spec:
+      backoffLimit: 1
+      activeDeadlineSeconds: 600
+      template:
+        metadata:
+          labels:
+            app.kubernetes.io/name: labca-backup
+        spec:
+          restartPolicy: Never
+          serviceAccountName: labca
+          automountServiceAccountToken: false
+          enableServiceLinks: false
+          dnsConfig:
+            options:
+              - name: ndots
+                value: "2"
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 10001
+            runAsGroup: 10001
+            fsGroup: 10001
+            fsGroupChangePolicy: OnRootMismatch
+            seccompProfile:
+              type: RuntimeDefault
+          # Init containers run first, so backup always precedes prune.
+          initContainers:
+            - name: backup
+              image: ghcr.io/cameloo1/labca:1.0.0
+              imagePullPolicy: IfNotPresent
+              args: ["cli", "backup", "--out-dir", "/backup", "--keep", "7"]
+              envFrom:
+                - configMapRef:
+                    name: labca-config
+                - secretRef:
+                    name: labca-app
+              securityContext:
+                readOnlyRootFilesystem: true
+                allowPrivilegeEscalation: false
+                runAsNonRoot: true
+                capabilities:
+                  drop: [ALL]
+              resources:
+                requests:
+                  cpu: 20m
+                  memory: 64Mi
+                limits:
+                  cpu: 200m
+                  memory: 192Mi
+              volumeMounts:
+                - name: data
+                  mountPath: /data
+                - name: backup
+                  mountPath: /backup
+                - name: tmp
+                  mountPath: /tmp
+                - name: kek
+                  mountPath: /run/secrets/labca-kek
+                  readOnly: true
+          containers:
+            - name: prune
+              image: ghcr.io/cameloo1/labca:1.0.0
+              imagePullPolicy: IfNotPresent
+              args: ["cli", "prune", "--expired-workload-older-than-days", "7"]
+              envFrom:
+                - configMapRef:
+                    name: labca-config
+                - secretRef:
+                    name: labca-app
+              securityContext:
+                readOnlyRootFilesystem: true
+                allowPrivilegeEscalation: false
+                runAsNonRoot: true
+                capabilities:
+                  drop: [ALL]
+              resources:
+                requests:
+                  cpu: 20m
+                  memory: 64Mi
+                limits:
+                  cpu: 200m
+                  memory: 192Mi
+              volumeMounts:
+                - name: data
+                  mountPath: /data
+                - name: backup
+                  mountPath: /backup
+                - name: tmp
+                  mountPath: /tmp
+                - name: kek
+                  mountPath: /run/secrets/labca-kek
+                  readOnly: true
+          volumes:
+            - name: data
+              persistentVolumeClaim:
+                claimName: labca-data
+            - name: backup
+              persistentVolumeClaim:
+                claimName: labca-backup
+            - name: tmp
+              emptyDir:
+                sizeLimit: 64Mi
+            # defaultMode 0400 with fsGroup: the kubelet makes the files
+            # group-readable, which UID 10001 needs to read the KEKs.
+            - name: kek
+              secret:
+                secretName: labca-kek
+                defaultMode: 0400

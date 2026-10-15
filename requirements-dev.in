@@ -1,6 +1,5 @@
 -c requirements.txt
 -r requirements.in
-httpx
 pytest
 pytest-cov
 faker

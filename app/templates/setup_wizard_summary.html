@@ -13,7 +13,7 @@
   <div class="grid gap-6 md:grid-cols-2">
     <div class="border border-gray-200 rounded-lg p-5 space-y-2">
       <h2 class="text-lg font-semibold text-gray-900">Identity</h2>
-      <p><span class="font-medium text-gray-700">Display name:</span> {{ config_data.get("name", "—") }}</p>
+      <p><span class="font-medium text-gray-700">Display name:</span> {{ config_data.get("name", "-") }}</p>
       {% if config_data.get("subject_cn") %}
         <p><span class="font-medium text-gray-700">Subject CN:</span> {{ config_data.get("subject_cn") }}</p>
       {% endif %}
@@ -42,6 +42,7 @@
   </div>
 
   <form method="post" action="/setup/complete" class="flex justify-between pt-4">
+    {{ csrf_input(request) }}
     <a href="/setup/step2" class="text-sm text-gray-600 hover:text-gray-900">Start over</a>
     <div class="space-x-3">
       <input type="hidden" name="mode" value="{{ mode }}" />

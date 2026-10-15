@@ -40,7 +40,7 @@
               <td class="px-4 py-3">{{ ca.subject_cn }}</td>
               <td class="px-4 py-3">{{ ca.key_algorithm }} {{ ca.key_size }}</td>
               <td class="px-4 py-3">
-                {{ ca.not_before.strftime("%Y-%m-%d") if ca.not_before else "—" }} → {{ ca.not_after.strftime("%Y-%m-%d") if ca.not_after else "—" }}
+                {{ ca.not_before.strftime("%Y-%m-%d") if ca.not_before else "-" }} → {{ ca.not_after.strftime("%Y-%m-%d") if ca.not_after else "-" }}
               </td>
               <td class="px-4 py-3">
                 <span class="px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-700">{{ ca.status }}</span>

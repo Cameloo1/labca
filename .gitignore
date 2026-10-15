@@ -20,3 +20,11 @@ test-results/
 .ruff_cache/
 /data/
 /.dev-keks/
+/.cache/
+
+# Terraform (infra/terraform)
+infra/terraform/.terraform/
+infra/terraform/*.tfvars
+infra/terraform/*.tfplan
+infra/terraform/crash.log
+/app/static/css/app.css

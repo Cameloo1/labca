@@ -1,0 +1,44 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - ../../base
+
+patches:
+  - target:
+      kind: Ingress
+      name: labca-pki
+    patch: |-
+      - op: replace
+        path: /spec/rules/0/host
+        value: labca.camelon.app
+  - target:
+      kind: Ingress
+      name: labca-status
+    patch: |-
+      - op: replace
+        path: /spec/rules/0/host
+        value: labca.camelon.app
+
+# Tags only. The Phase 6 deploy/deploy.sh renders a generated overlay that
+# pins both images by digest.
+images:
+  - name: ghcr.io/cameloo1/labca
+    newTag: "1.0.0"
+  - name: ghcr.io/cameloo1/labca-mtls-demo
+    newTag: "1.0.0"
+
+configMapGenerator:
+  - name: labca-config
+    namespace: labca-system
+    behavior: merge
+    literals:
+      - PUBLIC_BASE_URL=https://labca.camelon.app
+      - WORKLOAD_TRUST_DOMAIN=labca.camelon.app
+  - name: mtls-demo-ids
+    namespace: mtls-demo
+    behavior: merge
+    literals:
+      - ALLOWED_CLIENT_IDS=spiffe://labca.camelon.app/ns/mtls-demo/sa/demo-client
+      - EXPECTED_SERVER_ID=spiffe://labca.camelon.app/ns/mtls-demo/sa/demo-server
+      - DEMO_CLIENT_ID=spiffe://labca.camelon.app/ns/mtls-demo/sa/demo-client

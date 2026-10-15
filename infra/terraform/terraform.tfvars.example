@@ -1,0 +1,14 @@
+# Example values. Copy to terraform.tfvars, which is gitignored.
+# The real file holds no secrets: the API token comes from the
+# CLOUDFLARE_API_TOKEN environment variable.
+
+account_id = "00000000000000000000000000000000"
+zone_name  = "example.com"
+
+hostnames = {
+  public = "ca.example.com"
+  admin  = "admin.ca.example.com"
+}
+
+access_enabled = false
+admin_emails   = ["admin@example.com"]

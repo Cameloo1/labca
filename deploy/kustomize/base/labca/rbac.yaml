@@ -1,0 +1,16 @@
+# LabCA validates workload ServiceAccount tokens with TokenReview, which needs
+# the built-in system:auth-delegator ClusterRole. It grants no other access.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: labca-auth-delegator
+  labels:
+    app.kubernetes.io/name: labca
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: system:auth-delegator
+subjects:
+  - kind: ServiceAccount
+    name: labca
+    namespace: labca-system

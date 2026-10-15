@@ -4,15 +4,14 @@ import json
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import HTMLResponse, RedirectResponse
-from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
 from app.dependencies import get_db
 from app.models import CertificateAuthority, ProfileType
 from app.services.profile_service import create_profile, get_profile, list_profiles, update_profile
+from app.templating import templates
 
 router = APIRouter(prefix="/profiles", tags=["profiles"])
-templates = Jinja2Templates(directory="app/templates")
 
 
 @router.get("", response_class=HTMLResponse)

@@ -5,14 +5,13 @@ from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import HTMLResponse
-from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
 from app.dependencies import get_db
 from app.models import ActorType, AuditLog
+from app.templating import templates
 
 router = APIRouter(prefix="/audit", tags=["audit"])
-templates = Jinja2Templates(directory="app/templates")
 
 
 @router.get("", response_class=HTMLResponse)

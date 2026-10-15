@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-import base64
+import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, Optional, Type, Union, cast
 
@@ -14,6 +14,7 @@ from sqlalchemy.orm import Session
 
 from app.models import CASourceTypeEnum, CAStatusEnum, CertificateAuthority
 from app.schemas import ImportCAConfig, RootCAConfig
+from app.services import keystore
 from app.services.persistence import create_certificate_authority
 
 HASH_ALGORITHMS: Dict[str, Type[Union[hashes.SHA256, hashes.SHA384, hashes.SHA512]]] = {
@@ -87,11 +88,13 @@ def create_root_ca(config: RootCAConfig, db: Session) -> CertificateAuthority:
         format=serialization.PrivateFormat.TraditionalOpenSSL,
         encryption_algorithm=serialization.NoEncryption(),
     )
-    encrypted_key = _encrypt_private_key(key_bytes)
+    ca_id = str(uuid.uuid4())
+    encrypted_key = keystore.seal_ca_key(ca_id, key_bytes)
 
     ca_record = create_certificate_authority(
         db,
         {
+            "id": ca_id,
             "name": config.name,
             "source_type": CASourceTypeEnum.ROOT,
             "parent_ca_id": None,
@@ -135,11 +138,13 @@ def import_ca(config: ImportCAConfig, db: Session) -> CertificateAuthority:
         format=serialization.PrivateFormat.TraditionalOpenSSL,
         encryption_algorithm=serialization.NoEncryption(),
     )
-    encrypted_key = _encrypt_private_key(key_bytes)
+    ca_id = str(uuid.uuid4())
+    encrypted_key = keystore.seal_ca_key(ca_id, key_bytes)
 
     ca_record = create_certificate_authority(
         db,
         {
+            "id": ca_id,
             "name": config.name,
             "source_type": source_type,
             "parent_ca_id": None,
@@ -236,12 +241,6 @@ def _key_algorithm_label(private_key) -> str:
     if isinstance(private_key, ec.EllipticCurvePrivateKey):
         return "ECDSA"
     return private_key.__class__.__name__
-
-
-def _encrypt_private_key(key_bytes: bytes) -> str:
-    """Placeholder encryption: base64 encode with prefix."""
-    encoded = base64.b64encode(key_bytes).decode("utf-8")
-    return f"enc::{encoded}"
 
 
 def _remember_master_passphrase(passphrase: Optional[str]) -> None:

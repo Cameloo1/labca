@@ -1,12 +1,50 @@
-version: "3.9"
+# Local development only. Nothing starts without `--profile dev`.
+# The CSS is built inside the image. When ./app is mounted for reload, run
+# `bash scripts/build-css.sh` once so app/static/css/app.css exists on the host.
+# Run `bash scripts/dev-kek.sh` once first to create the throwaway dev KEK.
+
+x-labca-env: &labca-env
+  ENV: dev
+  DATABASE_URL: sqlite:////data/labca.db
+  LABCA_KEK_DIR: /run/secrets/labca-kek
+  LABCA_ACTIVE_KEK_ID: dev-1
+  ADMIN_AUTH_MODE: none
+  API_TOKEN_CREATION_SECRET: ${API_TOKEN_CREATION_SECRET:-}
+  LOG_FORMAT: text
+
+x-labca-volumes: &labca-volumes
+  - labca-dev-data:/data
+  - ./.dev-keks:/run/secrets/labca-kek:ro
+  - ./app:/app/app:ro
 
 services:
-  labca:
+  labca-migrate:
+    profiles: ["dev"]
     build: .
+    command: ["migrate"]
+    environment: *labca-env
+    volumes: *labca-volumes
+    restart: "no"
+
+  labca:
+    profiles: ["dev"]
+    build: .
+    depends_on:
+      labca-migrate:
+        condition: service_completed_successfully
     ports:
-      - "8000:8000"
-    env_file:
-      - .env
-    volumes:
-      - .:/app
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+      - "127.0.0.1:8000:8000"
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - "no-new-privileges:true"
+    volumes: *labca-volumes
+    entrypoint: ["uvicorn"]
+    command: ["app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload", "--reload-dir", "/app/app"]
+    environment: *labca-env
+
+volumes:
+  labca-dev-data:

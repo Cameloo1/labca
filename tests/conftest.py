@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import base64
+import os
 from typing import Generator
 
 import pytest
@@ -14,6 +16,18 @@ from app.config import get_settings
 from app.dependencies import get_db
 from app.main import app
 from app.models import Base
+from app.security.access_jwt import set_jwks_cache
+from app.security.csrf import (
+    CSRF_COOKIE_NAME,
+    CSRF_FORM_FIELD,
+    CSRF_HEADER,
+    make_token,
+    new_cookie_value,
+)
+from app.services import keystore
+from app.services.revocation_service import restore_post_revoke_hooks, snapshot_post_revoke_hooks
+from app.services.tokenreview import get_token_reviewer
+from app.services.workload_service import reset_rate_limiter
 
 
 @pytest.fixture(scope="function", autouse=True)
@@ -23,13 +37,23 @@ def settings_override(monkeypatch) -> Generator[None, None, None]:
     monkeypatch.setenv("DATABASE_URL", "sqlite:///:memory:")
     monkeypatch.setenv("API_TOKEN_CREATION_SECRET", "unit-secret")
 
+    # Start from a clean keystore environment, then configure one deterministic test KEK.
+    for name in list(os.environ):
+        if name.startswith("LABCA_KEK_"):
+            monkeypatch.delenv(name, raising=False)
+    monkeypatch.delenv("LABCA_ACTIVE_KEK_ID", raising=False)
+    monkeypatch.setenv("LABCA_KEK_TEST_1", base64.b64encode(bytes(range(32))).decode())
+    monkeypatch.setenv("LABCA_ACTIVE_KEK_ID", "test-1")
+
     # Clear the cache to get fresh settings
     get_settings.cache_clear()
+    keystore.get_keyring.cache_clear()
 
     yield
 
     # Clear cache again to ensure fresh settings on next call
     get_settings.cache_clear()
+    keystore.get_keyring.cache_clear()
 
 
 @pytest.fixture(scope="function")
@@ -72,6 +96,7 @@ def client(db_session, settings_override) -> Generator[TestClient, None, None]:
     """Create a FastAPI TestClient with database dependency override."""
     # Ensure settings cache is cleared so routes get the updated settings
     get_settings.cache_clear()
+    keystore.get_keyring.cache_clear()
 
     def override_get_db():
         try:
@@ -87,3 +112,52 @@ def client(db_session, settings_override) -> Generator[TestClient, None, None]:
 
     # Clean up
     app.dependency_overrides.clear()
+
+
+@pytest.fixture(scope="function", autouse=True)
+def _restore_post_revoke_hooks() -> Generator[None, None, None]:
+    """Keep tests that clear or add post-revocation hooks from leaking into other tests."""
+    snapshot = snapshot_post_revoke_hooks()
+    yield
+    restore_post_revoke_hooks(snapshot)
+
+
+@pytest.fixture(scope="function", autouse=True)
+def _reset_workload_state() -> Generator[None, None, None]:
+    """Start each test with a fresh workload rate limiter and token reviewer."""
+    reset_rate_limiter()
+    get_token_reviewer.cache_clear()
+    yield
+
+
+@pytest.fixture
+def csrf():
+    """Return a function that gives the client a CSRF cookie and returns the matching form field."""
+
+    def _make(client) -> dict[str, str]:
+        value = new_cookie_value()
+        client.cookies.delete(CSRF_COOKIE_NAME)
+        client.cookies.set(CSRF_COOKIE_NAME, value)
+        return {CSRF_FORM_FIELD: make_token(value)}
+
+    return _make
+
+
+@pytest.fixture
+def csrf_headers():
+    """Same as csrf, but returns the token as the X-CSRF-Token header."""
+
+    def _make(client) -> dict[str, str]:
+        value = new_cookie_value()
+        client.cookies.delete(CSRF_COOKIE_NAME)
+        client.cookies.set(CSRF_COOKIE_NAME, value)
+        return {CSRF_HEADER: make_token(value)}
+
+    return _make
+
+
+@pytest.fixture(scope="function", autouse=True)
+def _reset_jwks_cache() -> Generator[None, None, None]:
+    """Tests that install a JWKS cache must not leak it into other tests."""
+    yield
+    set_jwks_cache(None)

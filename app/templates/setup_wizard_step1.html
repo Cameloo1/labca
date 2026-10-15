@@ -13,6 +13,7 @@
   </header>
 
   <form method="post" action="/setup/step1" class="space-y-4">
+    {{ csrf_input(request) }}
     <p class="text-gray-600">This wizard takes a few steps and only needs to run once per environment.</p>
     <button type="submit" class="inline-flex items-center justify-center rounded-md bg-blue-600 px-6 py-3 text-white font-semibold shadow hover:bg-blue-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
       Get started

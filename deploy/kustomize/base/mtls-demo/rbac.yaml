@@ -1,0 +1,31 @@
+# The verifier merge-patches the mtls-status ConfigMap (see
+# mtls-demo/internal/verifier/run.go) and never reads it through the API.
+# It gets patch on that one object and nothing else.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: mtls-status-writer
+  namespace: mtls-demo
+  labels:
+    app.kubernetes.io/name: mtls-verifier
+rules:
+  - apiGroups: [""]
+    resources: [configmaps]
+    resourceNames: [mtls-status]
+    verbs: [patch]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: mtls-status-writer
+  namespace: mtls-demo
+  labels:
+    app.kubernetes.io/name: mtls-verifier
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: mtls-status-writer
+subjects:
+  - kind: ServiceAccount
+    name: mtls-verifier
+    namespace: mtls-demo

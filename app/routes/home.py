@@ -1,14 +1,13 @@
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import HTMLResponse
-from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
 from app.config import get_settings
 from app.dependencies import get_db
+from app.templating import templates
 
 router = APIRouter(tags=["home"])
 
-templates = Jinja2Templates(directory="app/templates")
 settings = get_settings()
 
 

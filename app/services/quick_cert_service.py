@@ -1,12 +1,13 @@
 from __future__ import annotations
 
-import base64
+import uuid
 from typing import Union
 
 from sqlalchemy.orm import Session
 
 from app.models import Certificate, CertificateStatusEnum, CertificateTypeEnum
 from app.schemas import AdvancedCertConfig, GeneratedCertBundle, SimpleCertConfig
+from app.services import keystore
 from app.services.persistence import create_certificate
 
 QuickCertConfig = Union[SimpleCertConfig, AdvancedCertConfig]
@@ -20,16 +21,19 @@ def save_quick_cert_to_db(
     store_in_labca: bool,
     environment_tags: list[str] | None = None,
     owner: str | None = None,
+    issued_by_token_id: str | None = None,
 ) -> Certificate:
     """Persist a quick certificate issuance in the Certificate table."""
     if bundle.cert_pem is None:
         raise ValueError("Certificate PEM output is required to store quick certs in LabCA.")
 
-    stored_key = _maybe_encrypt_key(bundle.key_pem)
+    cert_id = str(uuid.uuid4())
+    stored_key = keystore.seal_cert_key(cert_id, bundle.key_pem) if bundle.key_pem else None
 
     certificate = create_certificate(
         db,
         {
+            "id": cert_id,
             "ca_id": None,
             "type": CertificateTypeEnum.INTERMEDIATE if bundle.is_ca else CertificateTypeEnum.LEAF,
             "common_name": bundle.common_name,
@@ -46,13 +50,7 @@ def save_quick_cert_to_db(
             "stored_key_encrypted_pem": stored_key,
             "cert_pem": bundle.cert_pem.decode("utf-8"),
             "is_ephemeral": not store_in_labca,
+            "issued_by_token_id": issued_by_token_id,
         },
     )
     return certificate
-
-
-def _maybe_encrypt_key(key_bytes: bytes | None) -> str | None:
-    if not key_bytes:
-        return None
-    encoded = base64.b64encode(key_bytes).decode("utf-8")
-    return f"enc::{encoded}"

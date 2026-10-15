@@ -24,6 +24,7 @@ class ApiToken(TimestampMixin, Base):
     permissions_json: Mapped[Dict[str, Any]] = mapped_column(JSON, nullable=False, default=dict)
     expires_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     last_used_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    policy_json: Mapped[Optional[Dict[str, Any]]] = mapped_column(JSON, nullable=True, default=None)
 
     def has_permission(self, permission: str) -> bool:
         permissions = self.permissions_json or {}

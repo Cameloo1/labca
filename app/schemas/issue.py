@@ -2,7 +2,9 @@ from __future__ import annotations
 
 from typing import Literal, Optional
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
+
+from app.services.uri_san import validate_uri_san
 
 
 class IssueFromCAConfig(BaseModel):
@@ -10,6 +12,7 @@ class IssueFromCAConfig(BaseModel):
     common_name: str
     dns_sans: list[str] = Field(default_factory=list)
     ip_sans: list[str] = Field(default_factory=list)
+    uri_sans: list[str] = Field(default_factory=list)
     organization: Optional[str] = None
     organizational_unit: Optional[str] = None
     country: Optional[str] = None
@@ -26,6 +29,11 @@ class IssueFromCAConfig(BaseModel):
     environment_tags: list[str] = Field(default_factory=list)
     owner: Optional[str] = None
     enable_expiration_reminders: bool = False
+
+    @field_validator("uri_sans")
+    @classmethod
+    def _validate_uri_sans(cls, values: list[str]) -> list[str]:
+        return [validate_uri_san(value) for value in values]
 
     @model_validator(mode="after")
     def _validate_key_constraints(self) -> "IssueFromCAConfig":

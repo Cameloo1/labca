@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import uuid
 from datetime import datetime, timedelta, timezone
 
 from app.models import (
@@ -9,12 +10,15 @@ from app.models import (
     CAStatusEnum,
     CertificateAuthority,
 )
+from app.services import keystore
 
 
 def _create_test_ca(db_session) -> CertificateAuthority:
     """Create a test CA for certificate issuance."""
     now = datetime.now(timezone.utc)
+    ca_id = str(uuid.uuid4())
     ca = CertificateAuthority(
+        id=ca_id,
         name="Test Root CA",
         source_type=CASourceTypeEnum.ROOT,
         subject_cn="Test Root CA",
@@ -26,7 +30,7 @@ def _create_test_ca(db_session) -> CertificateAuthority:
         key_size=4096,
         status=CAStatusEnum.ACTIVE,
         cert_pem="-----BEGIN CERTIFICATE-----\nTEST-CA-CERT\n-----END CERTIFICATE-----",
-        key_encrypted_pem="enc::dGVzdC1jYS1rZXk=",  # base64("test-ca-key")
+        key_encrypted_pem=keystore.seal_ca_key(ca_id, b"test-ca-key"),
     )
     db_session.add(ca)
     db_session.commit()
@@ -37,7 +41,7 @@ def _create_test_ca(db_session) -> CertificateAuthority:
 # ========== Quick Cert Input Validation Tests ==========
 
 
-def test_quick_cert_extremely_long_cn(client, db_session):
+def test_quick_cert_extremely_long_cn(client, db_session, csrf):
     """Test that extremely long CN (1024 chars) is handled gracefully."""
     long_cn = "a" * 1024
     payload = {
@@ -51,7 +55,7 @@ def test_quick_cert_extremely_long_cn(client, db_session):
         "output_pem_key": "true",
     }
 
-    response = client.post("/quick-cert", data=payload, follow_redirects=False)
+    response = client.post("/quick-cert", data={**payload, **csrf(client)}, follow_redirects=False)
     # Should either succeed (if DB allows) or return validation error, but not crash
     assert response.status_code != 500  # Should not be 500
     if response.status_code == 400:
@@ -59,7 +63,7 @@ def test_quick_cert_extremely_long_cn(client, db_session):
         assert "common name" in response.text.lower() or "too long" in response.text.lower()
 
 
-def test_quick_cert_invalid_ip_san(client, db_session):
+def test_quick_cert_invalid_ip_san(client, db_session, csrf):
     """Test that invalid IP SAN (999.999.999.999) returns error, not 500."""
     payload = {
         "common_name": "test.example.com",
@@ -73,13 +77,13 @@ def test_quick_cert_invalid_ip_san(client, db_session):
         "output_pem_key": "true",
     }
 
-    response = client.post("/quick-cert", data=payload, follow_redirects=False)
+    response = client.post("/quick-cert", data={**payload, **csrf(client)}, follow_redirects=False)
     assert response.status_code != 500
     if response.status_code == 400:
         assert "invalid ip" in response.text.lower() or "ip address" in response.text.lower()
 
 
-def test_quick_cert_invalid_oid_in_advanced_mode(client, db_session):
+def test_quick_cert_invalid_oid_in_advanced_mode(client, db_session, csrf):
     """Test that invalid OID string in advanced mode returns validation error or is handled gracefully."""
     payload = {
         "common_name": "test.example.com",
@@ -93,14 +97,14 @@ def test_quick_cert_invalid_oid_in_advanced_mode(client, db_session):
         "eku_custom_oids": "invalid-oid-string",  # Invalid OID format
     }
 
-    response = client.post("/quick-cert?mode=advanced", data=payload, follow_redirects=False)
+    response = client.post("/quick-cert?mode=advanced", data={**payload, **csrf(client)}, follow_redirects=False)
     # Should either return validation error (400) or handle gracefully (200), but not crash (500)
     assert response.status_code != 500
     if response.status_code == 400:
         assert "oid" in response.text.lower() or "invalid" in response.text.lower()
 
 
-def test_quick_cert_very_long_validity(client, db_session):
+def test_quick_cert_very_long_validity(client, db_session, csrf):
     """Test that very long validity (100 years) is handled gracefully."""
     # 100 years = 36500 days (approximately)
     payload = {
@@ -114,7 +118,7 @@ def test_quick_cert_very_long_validity(client, db_session):
         "output_pem_key": "true",
     }
 
-    response = client.post("/quick-cert", data=payload, follow_redirects=False)
+    response = client.post("/quick-cert", data={**payload, **csrf(client)}, follow_redirects=False)
     # Should either validate and normalize or return error, but not crash
     assert response.status_code != 500
     if response.status_code == 400:
@@ -124,7 +128,7 @@ def test_quick_cert_very_long_validity(client, db_session):
 # ========== CA Creation Input Validation Tests ==========
 
 
-def test_ca_creation_empty_cn(client, db_session):
+def test_ca_creation_empty_cn(client, db_session, csrf):
     """Test that CA creation with empty CN returns validation error or is handled gracefully."""
     payload = {
         "name": "Test CA",
@@ -136,7 +140,7 @@ def test_ca_creation_empty_cn(client, db_session):
         "path_length": "1",
     }
 
-    response = client.post("/setup/root", data=payload, follow_redirects=False)
+    response = client.post("/setup/root", data={**payload, **csrf(client)}, follow_redirects=False)
     # Should either return validation error (400) or handle gracefully, but not crash (500)
     assert response.status_code != 500
     # If it succeeds (200), it means validation happens later or CN is optional
@@ -149,7 +153,7 @@ def test_ca_creation_empty_cn(client, db_session):
         )
 
 
-def test_ca_creation_very_long_validity(client, db_session):
+def test_ca_creation_very_long_validity(client, db_session, csrf):
     """Test that very long validity (100 years) is handled gracefully."""
     payload = {
         "name": "Test CA",
@@ -161,7 +165,7 @@ def test_ca_creation_very_long_validity(client, db_session):
         "path_length": "1",
     }
 
-    response = client.post("/setup/root", data=payload, follow_redirects=False)
+    response = client.post("/setup/root", data={**payload, **csrf(client)}, follow_redirects=False)
     # Should either validate (if within limits) or return error, but not crash
     assert response.status_code != 500
     if response.status_code == 400:
@@ -294,7 +298,7 @@ def test_api_missing_required_fields(client, db_session):
     assert response.status_code != 500
 
 
-def test_certificate_issuance_from_ca_invalid_cn(client, db_session):
+def test_certificate_issuance_from_ca_invalid_cn(client, db_session, csrf):
     """Test that issuing cert from CA with invalid CN returns error, not 500."""
     ca = _create_test_ca(db_session)
 
@@ -309,13 +313,13 @@ def test_certificate_issuance_from_ca_invalid_cn(client, db_session):
         "store_in_db": "true",
     }
 
-    response = client.post(f"/cas/{ca.id}/issue", data=payload, follow_redirects=False)
+    response = client.post(f"/cas/{ca.id}/issue", data={**payload, **csrf(client)}, follow_redirects=False)
     assert response.status_code != 500
     if response.status_code == 400:
         assert "common name" in response.text.lower() or "required" in response.text.lower()
 
 
-def test_certificate_issuance_from_ca_extreme_validity(client, db_session):
+def test_certificate_issuance_from_ca_extreme_validity(client, db_session, csrf):
     """Test that extreme validity values are handled gracefully."""
     ca = _create_test_ca(db_session)
 
@@ -330,7 +334,7 @@ def test_certificate_issuance_from_ca_extreme_validity(client, db_session):
         "store_in_db": "true",
     }
 
-    response = client.post(f"/cas/{ca.id}/issue", data=payload, follow_redirects=False)
+    response = client.post(f"/cas/{ca.id}/issue", data={**payload, **csrf(client)}, follow_redirects=False)
     # Should either validate (if within CA's validity) or return error, but not crash
     assert response.status_code != 500
     if response.status_code == 400:
