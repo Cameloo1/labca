@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-import base64
+import uuid
 from datetime import datetime, timedelta, timezone
 from ipaddress import ip_address
 from typing import Dict, List, Optional, Type, Union
@@ -13,8 +13,10 @@ from cryptography.hazmat.primitives.asymmetric import ec, rsa
 from cryptography.x509.oid import ExtendedKeyUsageOID, NameOID, ObjectIdentifier
 from sqlalchemy.orm import Session
 
+from app.logging_config import logger
 from app.models import CertificateAuthority, CertificateStatusEnum, CertificateTypeEnum
 from app.schemas import IssueFromCAConfig
+from app.services import keystore
 from app.services.persistence import create_certificate
 
 HASH_ALGOS: Dict[str, Type[Union[hashes.SHA256, hashes.SHA384, hashes.SHA512]]] = {
@@ -28,6 +30,10 @@ CURVE_MAP: Dict[str, Type[Union[ec.SECP256R1, ec.SECP384R1, ec.SECP521R1]]] = {
     "P-384": ec.SECP384R1,
     "P-521": ec.SECP521R1,
 }
+
+
+class CAKeyUnavailableError(ValueError):
+    """The CA private key cannot be unsealed; subclass of ValueError so route handlers return 400."""
 
 
 def issue_cert_from_ca(
@@ -101,11 +107,13 @@ def issue_cert_from_ca(
         encryption_algorithm=serialization.NoEncryption(),
     ).decode("utf-8")
 
-    stored_key = _encrypt_private_key(key_pem.encode("utf-8")) if config.store_in_db else None
+    cert_id = str(uuid.uuid4())
+    stored_key = keystore.seal_cert_key(cert_id, key_pem.encode("utf-8")) if config.store_in_db else None
 
     certificate_record = create_certificate(
         db,
         {
+            "id": cert_id,
             "ca_id": ca.id,
             "type": CertificateTypeEnum.INTERMEDIATE if config.is_ca else CertificateTypeEnum.LEAF,
             "common_name": config.common_name,
@@ -133,7 +141,11 @@ def issue_cert_from_ca(
 def _load_ca_private_key(ca: CertificateAuthority):
     if not ca.key_encrypted_pem:
         raise ValueError("CA private key is not available for issuance.")
-    raw = _decrypt_private_key(ca.key_encrypted_pem)
+    try:
+        raw = keystore.unseal_ca_key(ca.id, ca.key_encrypted_pem)
+    except keystore.KeystoreError as exc:
+        logger.error("CA private key unseal failed", extra={"ca_id": ca.id, "error": type(exc).__name__})
+        raise CAKeyUnavailableError("CA private key could not be unsealed.") from None
     return serialization.load_pem_private_key(raw, password=None)
 
 
@@ -202,16 +214,6 @@ def _build_extended_key_usage(config: IssueFromCAConfig) -> Optional[x509.Extend
     if config.usage_preset == "client_tls":
         oids.append(ExtendedKeyUsageOID.CLIENT_AUTH)
     return x509.ExtendedKeyUsage(oids) if oids else None
-
-
-def _encrypt_private_key(key_bytes: bytes) -> str:
-    return "enc::" + base64.b64encode(key_bytes).decode("utf-8")
-
-
-def _decrypt_private_key(encoded: str) -> bytes:
-    if encoded.startswith("enc::"):
-        encoded = encoded[len("enc::") :]
-    return base64.b64decode(encoded.encode("utf-8"))
 
 
 def _as_aware(dt: datetime) -> datetime:

@@ -13,6 +13,7 @@ from app.dependencies import get_db
 from app.logging_config import logger
 from app.models import ActorType, AuditStatus, CertificateAuthority
 from app.schemas import ImportCAConfig, RootCAConfig
+from app.services import keystore
 from app.services.audit_service import log_action
 from app.services.ca_service import create_root_ca, import_ca
 
@@ -212,16 +213,19 @@ async def setup_complete(request: Request, db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail="Missing configuration payload.")
 
     data = _decode_config(cast(str, payload))
-    if mode == "create":
-        root_config = RootCAConfig(**data)
-        ca = create_root_ca(root_config, db)
-        action = "CREATE_CA"
-    elif mode == "import":
-        import_config = ImportCAConfig(**data)
-        ca = import_ca(import_config, db)
-        action = "IMPORT_CA"
-    else:
-        raise HTTPException(status_code=400, detail="Unknown setup mode.")
+    try:
+        if mode == "create":
+            root_config = RootCAConfig(**data)
+            ca = create_root_ca(root_config, db)
+            action = "CREATE_CA"
+        elif mode == "import":
+            import_config = ImportCAConfig(**data)
+            ca = import_ca(import_config, db)
+            action = "IMPORT_CA"
+        else:
+            raise HTTPException(status_code=400, detail="Unknown setup mode.")
+    except keystore.KeystoreError as exc:
+        raise HTTPException(status_code=503, detail=f"Key storage is not configured: {exc}") from None
 
     log_action(
         db,

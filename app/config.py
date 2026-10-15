@@ -14,6 +14,9 @@ class Settings(BaseSettings):
     LOG_LEVEL: str = Field(default="INFO", description="Python logging level")
     ENABLE_API_DOCS: bool = Field(default=True, description="Enable Swagger/ReDoc endpoints")
 
+    LABCA_KEK_DIR: Optional[str] = Field(default=None, description="Directory of KEK files (prod)")
+    LABCA_ACTIVE_KEK_ID: Optional[str] = Field(default=None, description="KEK id used for new seals")
+
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
 

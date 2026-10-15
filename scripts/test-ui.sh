@@ -47,6 +47,9 @@ for NODE_ID in "${NODE_IDS[@]}"; do
   export DATABASE_URL="sqlite:///$TMP_DIR/labca-ui.db"
   export API_TOKEN_CREATION_SECRET="ui-test-secret"
   export ENV="test"
+  LABCA_KEK_UI_TEST="$(python -c 'import base64, os; print(base64.b64encode(os.urandom(32)).decode())')"
+  export LABCA_KEK_UI_TEST
+  export LABCA_ACTIVE_KEK_ID="ui-test"
 
   python -m alembic upgrade head
   python -m uvicorn app.main:app --host 127.0.0.1 --port "$PORT" >"$TMP_DIR/server.log" 2>&1 &

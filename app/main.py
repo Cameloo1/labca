@@ -1,9 +1,13 @@
+from contextlib import asynccontextmanager
+from typing import AsyncIterator
+
 from fastapi import FastAPI, HTTPException
 from fastapi.staticfiles import StaticFiles
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from .config import get_settings
 from .error_handlers import http_exception_handler, server_exception_handler
+from .logging_config import install_redaction_filter
 from .middleware import RequestLoggingMiddleware
 from .routes import api as api_routes
 from .routes import api_ui as api_ui_routes
@@ -17,12 +21,22 @@ from .routes import profiles as profiles_routes
 from .routes import quick_cert as quick_cert_routes
 from .routes import settings as settings_routes
 from .routes import setup as setup_routes
+from .startup import run_startup_checks
 
 settings = get_settings()
 
 docs_enabled = not (settings.ENV.lower() == "prod" and not settings.ENABLE_API_DOCS)
 
+
+@asynccontextmanager
+async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
+    install_redaction_filter()
+    run_startup_checks(get_settings())
+    yield
+
+
 app = FastAPI(
+    lifespan=lifespan,
     title=settings.APP_NAME,
     version="0.1.0",
     docs_url="/docs" if docs_enabled else None,

@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import base64
 from datetime import datetime, timezone
 from typing import Literal, Optional, Tuple, cast
 
@@ -29,6 +28,7 @@ from app.schemas import (
     TokenCreateResponse,
     TokenPermissions,
 )
+from app.services import keystore
 from app.services.api_token_service import create_token
 from app.services.audit_service import log_action
 from app.services.cert_issuance_service import issue_cert_from_ca
@@ -171,7 +171,19 @@ def get_certificate_via_api(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Private key is not stored for this certificate.",
             )
-        private_key_pem = _decode_encrypted_pem(certificate.stored_key_encrypted_pem).decode("utf-8")
+        try:
+            private_key_pem = keystore.unseal_cert_key(certificate.id, certificate.stored_key_encrypted_pem).decode(
+                "utf-8"
+            )
+        except keystore.KeystoreError as exc:
+            logger.error(
+                "Stored key unseal failed",
+                extra={"certificate_id": certificate.id, "error": type(exc).__name__},
+            )
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Stored private key could not be decrypted.",
+            ) from None
     metadata = _build_metadata(certificate, key_allowed)
     return CertificateResponse(
         certificate_id=certificate.id,
@@ -289,12 +301,6 @@ def _ensure_timezone(value: datetime) -> datetime:
     if value.tzinfo is None:
         return value.replace(tzinfo=timezone.utc)
     return value.astimezone(timezone.utc)
-
-
-def _decode_encrypted_pem(value: str) -> bytes:
-    if value.startswith("enc::"):
-        value = value[len("enc::") :]
-    return base64.b64decode(value.encode("utf-8"))
 
 
 def _is_key_download_allowed(certificate: Certificate, policy: AllowKeyDownloadPolicy) -> bool:

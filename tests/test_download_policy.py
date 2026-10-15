@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-import base64
+import uuid
 from datetime import datetime, timedelta, timezone
 
 from app.models import (
@@ -14,13 +14,16 @@ from app.models import (
     CertificateStatusEnum,
     CertificateTypeEnum,
 )
+from app.services import keystore
 from app.services.settings_service import update_app_settings
 
 
 def _create_test_ca(db_session) -> CertificateAuthority:
     """Create a test CA."""
     now = datetime.now(timezone.utc)
+    ca_id = str(uuid.uuid4())
     ca = CertificateAuthority(
+        id=ca_id,
         name="Test Root CA",
         source_type=CASourceTypeEnum.ROOT,
         subject_cn="Test Root CA",
@@ -32,7 +35,7 @@ def _create_test_ca(db_session) -> CertificateAuthority:
         key_size=4096,
         status=CAStatusEnum.ACTIVE,
         cert_pem="-----BEGIN CERTIFICATE-----\nTEST-CA-CERT\n-----END CERTIFICATE-----",
-        key_encrypted_pem="enc::" + base64.b64encode(b"test-ca-key").decode("utf-8"),
+        key_encrypted_pem=keystore.seal_ca_key(ca_id, b"test-ca-key"),
     )
     db_session.add(ca)
     db_session.commit()
@@ -48,7 +51,9 @@ def _create_test_certificate(
 ) -> Certificate:
     """Create a test certificate with stored key."""
     now = datetime.now(timezone.utc)
+    cert_id = str(uuid.uuid4())
     cert = Certificate(
+        id=cert_id,
         ca=ca,
         type=cert_type,
         common_name=common_name,
@@ -62,7 +67,7 @@ def _create_test_certificate(
         status=CertificateStatusEnum.ACTIVE,
         environment_tags=[],
         owner=None,
-        stored_key_encrypted_pem="enc::" + base64.b64encode(b"test-private-key").decode("utf-8"),
+        stored_key_encrypted_pem=keystore.seal_cert_key(cert_id, b"test-private-key"),
         cert_pem="-----BEGIN CERTIFICATE-----\nTEST-CERT\n-----END CERTIFICATE-----",
         is_ephemeral=False,
     )
@@ -221,7 +226,9 @@ def test_certificate_without_stored_key_returns_404(client, db_session):
 
     ca = _create_test_ca(db_session)
     now = datetime.now(timezone.utc)
+    cert_id = str(uuid.uuid4())
     cert = Certificate(
+        id=cert_id,
         ca=ca,
         type=CertificateTypeEnum.LEAF,
         common_name="no-key.test.com",

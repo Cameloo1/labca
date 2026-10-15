@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import base64
 from datetime import datetime, timedelta, timezone
 from typing import List, Optional
 
@@ -20,6 +19,7 @@ from app.models import (
     CertificateStatusEnum,
     CertificateTypeEnum,
 )
+from app.services import keystore
 from app.services.audit_service import log_action
 from app.services.revocation_service import revoke_certificate
 from app.services.settings_service import get_app_settings
@@ -167,7 +167,14 @@ def download_certificate_key(cert_id: str, db: Session = Depends(get_db)) -> Pla
     app_settings = get_app_settings(db)
     if not _is_key_download_allowed(certificate, app_settings.allow_key_download_policy):
         raise HTTPException(status_code=403, detail="Private key downloads are disabled by policy.")
-    key_bytes = _decode_encrypted_pem(certificate.stored_key_encrypted_pem)
+    try:
+        key_bytes = keystore.unseal_cert_key(certificate.id, certificate.stored_key_encrypted_pem)
+    except keystore.KeystoreError as exc:
+        logger.error(
+            "Stored key unseal failed",
+            extra={"certificate_id": certificate.id, "error": type(exc).__name__},
+        )
+        raise HTTPException(status_code=500, detail="Stored private key could not be decrypted.") from None
     filename = f"{certificate.common_name.replace(' ', '_')}.key"
     return PlainTextResponse(
         key_bytes.decode("utf-8"),
@@ -252,12 +259,6 @@ async def revoke_certificate_submit(
         url=f"/certificates/{cert_id}?message=Certificate+revoked+successfully.",
         status_code=303,
     )
-
-
-def _decode_encrypted_pem(value: str) -> bytes:
-    if value.startswith("enc::"):
-        value = value[len("enc::") :]
-    return base64.b64decode(value.encode("utf-8"))
 
 
 def _as_aware(dt: datetime) -> datetime:

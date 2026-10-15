@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import uuid
 from datetime import datetime, timedelta, timezone
 
 from app.models import (
@@ -9,12 +10,15 @@ from app.models import (
     CAStatusEnum,
     CertificateAuthority,
 )
+from app.services import keystore
 
 
 def _create_test_ca(db_session) -> CertificateAuthority:
     """Create a test CA for certificate issuance."""
     now = datetime.now(timezone.utc)
+    ca_id = str(uuid.uuid4())
     ca = CertificateAuthority(
+        id=ca_id,
         name="Test Root CA",
         source_type=CASourceTypeEnum.ROOT,
         subject_cn="Test Root CA",
@@ -26,7 +30,7 @@ def _create_test_ca(db_session) -> CertificateAuthority:
         key_size=4096,
         status=CAStatusEnum.ACTIVE,
         cert_pem="-----BEGIN CERTIFICATE-----\nTEST-CA-CERT\n-----END CERTIFICATE-----",
-        key_encrypted_pem="enc::dGVzdC1jYS1rZXk=",  # base64("test-ca-key")
+        key_encrypted_pem=keystore.seal_ca_key(ca_id, b"test-ca-key"),
     )
     db_session.add(ca)
     db_session.commit()
