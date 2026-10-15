@@ -17,6 +17,7 @@ from app.dependencies import get_db
 from app.main import app
 from app.models import Base
 from app.services import keystore
+from app.services.revocation_service import restore_post_revoke_hooks, snapshot_post_revoke_hooks
 
 
 @pytest.fixture(scope="function", autouse=True)
@@ -101,3 +102,11 @@ def client(db_session, settings_override) -> Generator[TestClient, None, None]:
 
     # Clean up
     app.dependency_overrides.clear()
+
+
+@pytest.fixture(scope="function", autouse=True)
+def _restore_post_revoke_hooks() -> Generator[None, None, None]:
+    """Keep tests that clear or add post-revocation hooks from leaking into other tests."""
+    snapshot = snapshot_post_revoke_hooks()
+    yield
+    restore_post_revoke_hooks(snapshot)

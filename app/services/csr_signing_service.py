@@ -26,6 +26,7 @@ from app.models import (
 )
 from app.services.cert_issuance_service import load_ca_private_key
 from app.services.persistence import create_certificate
+from app.services.pki_service import distribution_extensions
 from app.services.uri_san import validate_uri_san
 
 MAX_CSR_PEM_BYTES = 16384
@@ -193,6 +194,8 @@ def issue_leaf_for_public_key(
     except x509.ExtensionNotFound:
         aki = x509.AuthorityKeyIdentifier.from_issuer_public_key(ca_key.public_key())
     builder = builder.add_extension(aki, critical=False)
+    for extension, critical in distribution_extensions(ca.id):
+        builder = builder.add_extension(extension, critical=critical)
 
     use_sha384 = isinstance(ca_key, ec.EllipticCurvePrivateKey) and ca_key.curve.name == "secp384r1"
     algorithm = hashes.SHA384() if use_sha384 else hashes.SHA256()

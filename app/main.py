@@ -17,6 +17,7 @@ from .routes import certificates as certificates_routes
 from .routes import help as help_routes
 from .routes import home as home_routes
 from .routes import notifications as notifications_routes
+from .routes import pki as pki_routes
 from .routes import profiles as profiles_routes
 from .routes import quick_cert as quick_cert_routes
 from .routes import settings as settings_routes
@@ -74,3 +75,4 @@ app.include_router(profiles_routes.router)
 app.include_router(api_routes.router)
 app.include_router(notifications_routes.router)
 app.include_router(audit_routes.router)
+app.include_router(pki_routes.router)

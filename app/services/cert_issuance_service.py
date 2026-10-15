@@ -18,6 +18,7 @@ from app.models import CertificateAuthority, CertificateStatusEnum, CertificateT
 from app.schemas import IssueFromCAConfig
 from app.services import keystore
 from app.services.persistence import create_certificate
+from app.services.pki_service import distribution_extensions
 
 HASH_ALGOS: Dict[str, Type[Union[hashes.SHA256, hashes.SHA384, hashes.SHA512]]] = {
     "SHA256": hashes.SHA256,
@@ -100,6 +101,8 @@ def issue_cert_from_ca(
     except x509.ExtensionNotFound:
         aki = x509.AuthorityKeyIdentifier.from_issuer_public_key(ca_key.public_key())
     builder = builder.add_extension(aki, critical=False)
+    for extension, critical in distribution_extensions(ca.id):
+        builder = builder.add_extension(extension, critical=critical)
 
     hash_algo = HASH_ALGOS[config.hash_algorithm]()
     certificate = builder.sign(private_key=ca_key, algorithm=hash_algo)

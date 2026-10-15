@@ -33,11 +33,20 @@ _post_revoke_hooks: list[PostRevokeHook] = []
 
 
 def register_post_revoke_hook(hook: PostRevokeHook) -> None:
-    _post_revoke_hooks.append(hook)
+    if hook not in _post_revoke_hooks:
+        _post_revoke_hooks.append(hook)
 
 
 def clear_post_revoke_hooks() -> None:
     _post_revoke_hooks.clear()
+
+
+def snapshot_post_revoke_hooks() -> tuple[PostRevokeHook, ...]:
+    return tuple(_post_revoke_hooks)
+
+
+def restore_post_revoke_hooks(snapshot: tuple[PostRevokeHook, ...]) -> None:
+    _post_revoke_hooks[:] = list(snapshot)
 
 
 def revoke_certificate(
