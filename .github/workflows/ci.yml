@@ -8,6 +8,10 @@ on:
 permissions:
   contents: read
 
+defaults:
+  run:
+    shell: bash
+
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
@@ -46,6 +50,8 @@ jobs:
         run: python -m pip install --require-hashes -r requirements-dev.txt
       - name: Test with coverage
         run: bash scripts/test.sh
+      - name: Services coverage gate
+        run: python -m coverage report --include='app/services/*' --fail-under=85
       - name: Upload coverage
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
@@ -66,7 +72,245 @@ jobs:
           cache-dependency-path: requirements-dev.txt
       - name: Install dependencies
         run: python -m pip install --require-hashes -r requirements-dev.txt
+      - name: Cache Tailwind CLI
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .cache/tailwind
+          # The Tailwind version and checksum live in build-css.sh, so hashing it keys the cache on the version.
+          key: tailwind-${{ runner.os }}-${{ hashFiles('scripts/build-css.sh') }}
+      - name: Build stylesheet
+        run: bash scripts/build-css.sh
       - name: Install Chromium
         run: python -m playwright install --with-deps chromium
       - name: UI tests
         run: bash scripts/test-ui.sh
+
+  sast:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements-dev.txt
+      - name: Install dependencies
+        run: python -m pip install --require-hashes -r requirements-dev.txt
+      - name: Bandit
+        run: python -m bandit -r app -ll -ii
+
+  deps:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements-dev.txt
+      - name: Install dependencies
+        run: python -m pip install --require-hashes -r requirements-dev.txt
+      - name: pip-audit
+        run: python -m pip_audit -r requirements.txt --require-hashes --disable-pip --progress-spinner off
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: mtls-demo/go.mod
+          cache: false
+      - name: govulncheck
+        working-directory: mtls-demo
+        run: go run golang.org/x/vuln/cmd/govulncheck@v1.9.0 ./...
+
+  secrets:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Gitleaks (full history)
+        run: docker run --rm -v "$PWD:/repo" zricethezav/gitleaks:v8.30.1@sha256:c00b6bd0aeb3071cbcb79009cb16a60dd9e0a7c60e2be9ab65d25e6bc8abbb7f git /repo --redact --no-banner --exit-code 1
+
+  go:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    defaults:
+      run:
+        shell: bash
+        working-directory: mtls-demo
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # The module has no dependencies and no go.sum, so the module cache is off.
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: mtls-demo/go.mod
+          cache: false
+      - name: gofmt
+        run: test -z "$(gofmt -l .)"
+      - name: go vet
+        run: go vet ./...
+      - name: go test -race
+        run: go test -race -count=1 ./...
+      - name: Coverage gate
+        run: |
+          go test -count=1 -coverprofile=cover.out ./internal/...
+          total="$(go tool cover -func=cover.out | awk '/^total:/ { sub("%", "", $NF); print $NF }')"
+          echo "internal coverage: ${total}%"
+          awk -v t="$total" 'BEGIN { exit !(t + 0 >= 80.0) }' || { echo "coverage ${total}% is below 80.0%" >&2; exit 1; }
+
+  iac:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements-dev.txt
+      - name: Install dependencies
+        run: python -m pip install --require-hashes -r requirements-dev.txt
+      - uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
+        with:
+          terraform_version: "1.16.5"
+          terraform_wrapper: false
+      - name: Terraform fmt
+        run: terraform -chdir=infra/terraform fmt -check -recursive
+      - name: Terraform init
+        run: terraform -chdir=infra/terraform init -backend=false -input=false
+      - name: Terraform validate
+        run: terraform -chdir=infra/terraform validate
+      - name: Terraform test
+        run: terraform -chdir=infra/terraform test
+      - name: kubectl version
+        run: kubectl version --client
+      - name: Manifest checks
+        env:
+          KUBECONFORM: bash scripts/ci/kubeconform.sh
+          KUBE_LINTER: bash scripts/ci/kube-linter.sh
+          TRIVY: bash scripts/ci/trivy.sh
+        run: bash scripts/check-manifests.sh
+      - name: Trivy config (Dockerfiles and Terraform)
+        run: |
+          for target in Dockerfile mtls-demo/Dockerfile infra/terraform; do
+            echo "== trivy config $target"
+            bash scripts/ci/trivy.sh config --severity HIGH,CRITICAL --exit-code 1 "$target"
+          done
+
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      - name: Build labca image
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          load: true
+          push: false
+          tags: labca:ci
+          cache-from: type=gha,scope=labca
+          cache-to: type=gha,scope=labca,mode=max
+      - name: Build mtls-demo image
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: mtls-demo
+          load: true
+          push: false
+          tags: labca-mtls-demo:ci
+          cache-from: type=gha,scope=labca-mtls-demo
+          cache-to: type=gha,scope=labca-mtls-demo,mode=max
+      - name: Image sizes
+        run: docker image ls labca:ci labca-mtls-demo:ci
+      - name: Image smoke test
+        env:
+          LABCA_IMAGE: labca:ci
+          DEMO_IMAGE: labca-mtls-demo:ci
+        run: bash scripts/image-smoke.sh
+      - name: Trivy image gate (labca)
+        run: docker run --rm -v /var/run/docker.sock:/var/run/docker.sock aquasec/trivy:0.74.0@sha256:62b1e65e8869bc4b4c6aa4fa2b21595256c7c2f6018a9d9ad61caf87187c1969 image --ignore-unfixed --severity HIGH,CRITICAL --exit-code 1 labca:ci
+      - name: Trivy image gate (mtls-demo)
+        run: docker run --rm -v /var/run/docker.sock:/var/run/docker.sock aquasec/trivy:0.74.0@sha256:62b1e65e8869bc4b4c6aa4fa2b21595256c7c2f6018a9d9ad61caf87187c1969 image --ignore-unfixed --severity HIGH,CRITICAL --exit-code 1 labca-mtls-demo:ci
+      - name: SBOM (labca)
+        uses: anchore/sbom-action@3ad7283483fc7af8ff2b4ea19663c2d5ca935e26 # v0.24.2
+        with:
+          image: labca:ci
+          format: cyclonedx-json
+          output-file: sbom-labca.cdx.json
+          upload-artifact: false
+      - name: SBOM (mtls-demo)
+        uses: anchore/sbom-action@3ad7283483fc7af8ff2b4ea19663c2d5ca935e26 # v0.24.2
+        with:
+          image: labca-mtls-demo:ci
+          format: cyclonedx-json
+          output-file: sbom-mtls-demo.cdx.json
+          upload-artifact: false
+      - name: Upload SBOM (labca)
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: sbom-labca.cdx.json
+          path: sbom-labca.cdx.json
+      - name: Upload SBOM (mtls-demo)
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: sbom-mtls-demo.cdx.json
+          path: sbom-mtls-demo.cdx.json
+      - name: Save images for e2e
+        run: docker save -o images.tar labca:ci labca-mtls-demo:ci
+      - name: Upload images
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: e2e-images
+          path: images.tar
+          retention-days: 1
+
+  e2e:
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # Test the exact images the build job smoke-tested and scanned.
+      - name: Download images
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: e2e-images
+      - name: Load images
+        run: docker load -i images.tar
+      - name: Install k3d
+        run: |
+          curl -fsSL --retry 3 -o /tmp/k3d https://github.com/k3d-io/k3d/releases/download/v5.9.0/k3d-linux-amd64
+          echo "06d8f25bc3a971c4eb29e0ff08429b180402db0f4dec838c9eac427e296800a0  /tmp/k3d" | sha256sum -c -
+          sudo install -m 0755 /tmp/k3d /usr/local/bin/k3d
+          k3d version
+      - name: End-to-end test
+        env:
+          E2E_SKIP_BUILD: "1"
+          LABCA_IMAGE: labca:ci
+          DEMO_IMAGE: labca-mtls-demo:ci
+        run: bash scripts/e2e.sh
+      - name: Upload diagnostics
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: e2e-diagnostics
+          path: |
+            .cache/e2e/
+            !.cache/e2e/cer/
+          if-no-files-found: ignore
+          retention-days: 7
