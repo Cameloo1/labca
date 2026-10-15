@@ -77,6 +77,7 @@ def issue_certificate_form(
         "locality": "",
         "dns_sans": "",
         "ip_sans": "",
+        "uri_sans": "",
         "key_algorithm": "RSA",
         "key_size": "2048",
         "curve": "P-256",
@@ -123,6 +124,7 @@ async def issue_certificate_submit(
     cleaned = _form_to_dict(form)
     dns_sans = _split_csv(cleaned.get("dns_sans", ""))
     ip_sans = _split_csv(cleaned.get("ip_sans", ""))
+    uri_sans = _split_csv(cleaned.get("uri_sans", ""))
     env_tags = _split_csv(cleaned.get("environment_tags", ""))
     store_in_db = cleaned.get("store_in_db") == "true" or cleaned.get("store_in_db") == "on"
 
@@ -136,6 +138,7 @@ async def issue_certificate_submit(
         "locality": _blank_to_none(cleaned.get("locality")),
         "dns_sans": dns_sans,
         "ip_sans": ip_sans,
+        "uri_sans": uri_sans,
         "key_algorithm": cleaned.get("key_algorithm", "RSA"),
         "key_size": _safe_int(cleaned.get("key_size")) or 2048,
         "curve": cleaned.get("curve") or "P-256",

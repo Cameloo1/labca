@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
+import hmac
+from datetime import datetime, timedelta, timezone
 from typing import Literal, Optional, Tuple, cast
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, status
@@ -22,19 +23,27 @@ from app.schemas import (
     CertificateIssueRequest,
     CertificateMetadata,
     CertificateResponse,
+    CertificateRevokeRequest,
+    CertificateRevokeResponse,
+    CertificateSignRequest,
+    CertificateSignResponse,
     IssueFromCAConfig,
     SimpleCertConfig,
     TokenCreateRequest,
     TokenCreateResponse,
     TokenPermissions,
+    TokenPolicy,
 )
 from app.services import keystore
 from app.services.api_token_service import create_token
 from app.services.audit_service import log_action
 from app.services.cert_issuance_service import issue_cert_from_ca
 from app.services.crypto_service import generate_self_signed_cert_simple
+from app.services.csr_signing_service import CsrError, issue_leaf_for_public_key, load_and_verify_csr
 from app.services.quick_cert_service import save_quick_cert_to_db
+from app.services.revocation_service import revoke_certificate
 from app.services.settings_service import get_app_settings
+from app.services.token_policy import PolicyViolation, can_revoke, check_issuance, policy_for
 
 # Alias for the key_size type of the config models, which validate the value at runtime.
 KeySize = Optional[Literal[2048, 3072, 4096]]
@@ -60,13 +69,19 @@ def create_api_token(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="API token creation is disabled. Set API_TOKEN_CREATION_SECRET to enable it.",
         )
-    if admin_secret != configured_secret:
+    if admin_secret is None or not hmac.compare_digest(admin_secret.encode(), configured_secret.encode()):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Invalid admin secret for token creation.",
         )
 
-    token, raw_value = create_token(payload.name, payload.permissions.model_dump(), payload.expires_at, db)
+    token, raw_value = create_token(
+        payload.name,
+        payload.permissions.model_dump(),
+        payload.expires_at,
+        db,
+        policy=payload.policy.model_dump() if payload.policy else None,
+    )
     log_action(
         db,
         actor_type=ActorType.USER,
@@ -94,6 +109,7 @@ def create_api_token(
         permissions=permissions,
         expires_at=token.expires_at,
         created_at=token.created_at,
+        policy=TokenPolicy.model_validate(token.policy_json) if token.policy_json is not None else None,
     )
 
 
@@ -113,10 +129,31 @@ def issue_certificate_via_api(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="API token is not permitted to issue certificates.",
         )
+    try:
+        check_issuance(
+            policy_for(api_token),
+            dns_sans=payload.dns_sans,
+            ip_sans=payload.ip_sans,
+            uri_sans=payload.uri_sans,
+            validity_hours=payload.validity_days * 24,
+        )
+    except PolicyViolation as exc:
+        log_action(
+            db,
+            actor_type=ActorType.API_TOKEN,
+            actor_id=api_token.token_prefix,
+            action="ISSUE_CERT",
+            target_type="CERTIFICATE",
+            target_id=None,
+            status=AuditStatus.FAILURE,
+            ip_address=_client_ip(request),
+            details={"reason": str(exc)},
+        )
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(exc)) from None
     if payload.issuer_ca_id:
-        result, certificate = _issue_via_ca(payload, db)
+        result, certificate = _issue_via_ca(payload, db, api_token.id)
     else:
-        result, certificate = _issue_self_signed(payload, db)
+        result, certificate = _issue_self_signed(payload, db, api_token.id)
 
     log_action(
         db,
@@ -193,7 +230,179 @@ def get_certificate_via_api(
     )
 
 
-def _issue_via_ca(payload: CertificateIssueRequest, db: Session) -> Tuple[CertificateResponse, Certificate]:
+@router.post(
+    "/certificates/sign",
+    response_model=CertificateSignResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+def sign_csr_via_api(
+    payload: CertificateSignRequest,
+    request: Request,
+    db: Session = Depends(get_db),
+    api_token: ApiToken = Depends(get_api_token),
+) -> CertificateSignResponse:
+    if not api_token.has_permission("issue"):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="API token is not permitted to issue certificates.",
+        )
+    ca = db.get(CertificateAuthority, payload.issuer_ca_id)
+    if ca is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Issuer CA not found.")
+
+    def _audit_failure(message: str) -> None:
+        log_action(
+            db,
+            actor_type=ActorType.API_TOKEN,
+            actor_id=api_token.token_prefix,
+            action="SIGN_CSR",
+            target_type="CERTIFICATE",
+            target_id=None,
+            status=AuditStatus.FAILURE,
+            ip_address=_client_ip(request),
+            details={"reason": message},
+        )
+
+    try:
+        info = load_and_verify_csr(payload.csr_pem)
+    except CsrError as exc:
+        _audit_failure(str(exc))
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from None
+
+    common_name = info.common_name or (info.dns_sans[0] if info.dns_sans else None)
+    if common_name is None and info.uri_sans:
+        common_name = info.uri_sans[0]
+    if common_name is None:
+        message = "CSR has no subject CN or SAN."
+        _audit_failure(message)
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=message)
+
+    try:
+        check_issuance(
+            policy_for(api_token),
+            dns_sans=info.dns_sans,
+            ip_sans=info.ip_sans,
+            uri_sans=info.uri_sans,
+            validity_hours=payload.validity_hours,
+        )
+    except PolicyViolation as exc:
+        _audit_failure(str(exc))
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(exc)) from None
+
+    try:
+        certificate = issue_leaf_for_public_key(
+            db,
+            ca,
+            info.public_key,
+            common_name=common_name,
+            dns_sans=info.dns_sans,
+            ip_sans=info.ip_sans,
+            uri_sans=info.uri_sans,
+            validity=timedelta(hours=payload.validity_hours),
+            usage_preset=payload.usage_preset,
+            environment_tags=["csr"],
+            owner=api_token.name,
+            issued_by_token_id=api_token.id,
+        )
+    except ValueError as exc:
+        _audit_failure(str(exc))
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from None
+
+    log_action(
+        db,
+        actor_type=ActorType.API_TOKEN,
+        actor_id=api_token.token_prefix,
+        action="SIGN_CSR",
+        target_type="CERTIFICATE",
+        target_id=certificate.id,
+        status=AuditStatus.SUCCESS,
+        ip_address=_client_ip(request),
+        details={
+            "issuer_ca_id": ca.id,
+            "common_name": certificate.common_name,
+            "serial_hex": certificate.serial_number,
+        },
+    )
+    logger.info(
+        "CSR signed via API",
+        extra={"token_prefix": api_token.token_prefix, "certificate_id": certificate.id},
+    )
+    return CertificateSignResponse(
+        certificate_id=certificate.id,
+        serial_hex=certificate.serial_number,
+        not_before=_ensure_timezone(certificate.not_before),
+        not_after=_ensure_timezone(certificate.not_after),
+        certificate_pem=certificate.cert_pem,
+        chain_pem=certificate.cert_pem.rstrip("\n") + "\n" + ca.cert_pem.rstrip("\n") + "\n",
+    )
+
+
+@router.post(
+    "/certificates/{certificate_id}/revoke",
+    response_model=CertificateRevokeResponse,
+)
+def revoke_certificate_via_api(
+    certificate_id: str,
+    payload: CertificateRevokeRequest,
+    request: Request,
+    db: Session = Depends(get_db),
+    api_token: ApiToken = Depends(get_api_token),
+) -> CertificateRevokeResponse:
+    if not api_token.has_permission("revoke"):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="API token is not permitted to revoke certificates.",
+        )
+    certificate = db.get(Certificate, certificate_id)
+    if certificate is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Certificate not found.")
+    if not can_revoke(api_token, certificate):
+        log_action(
+            db,
+            actor_type=ActorType.API_TOKEN,
+            actor_id=api_token.token_prefix,
+            action="REVOKE_CERT",
+            target_type="CERTIFICATE",
+            target_id=certificate.id,
+            status=AuditStatus.FAILURE,
+            ip_address=_client_ip(request),
+            details={"reason": "not_owner"},
+        )
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="API token may only revoke certificates it issued.",
+        )
+    if certificate.revoked_at is not None:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Certificate is already revoked.")
+
+    revoke_certificate(certificate, payload.reason, db, reason_code=payload.reason)
+    log_action(
+        db,
+        actor_type=ActorType.API_TOKEN,
+        actor_id=api_token.token_prefix,
+        action="REVOKE_CERT",
+        target_type="CERTIFICATE",
+        target_id=certificate.id,
+        status=AuditStatus.SUCCESS,
+        ip_address=_client_ip(request),
+        details={"reason": payload.reason, "via": "api"},
+    )
+    logger.info(
+        "Certificate revoked via API",
+        extra={"token_prefix": api_token.token_prefix, "certificate_id": certificate.id},
+    )
+    return CertificateRevokeResponse(
+        revoked=True,
+        certificate_id=certificate.id,
+        serial_hex=certificate.serial_number,
+        reason=payload.reason,
+        revoked_at=_ensure_timezone(certificate.revoked_at or datetime.now(timezone.utc)),
+    )
+
+
+def _issue_via_ca(
+    payload: CertificateIssueRequest, db: Session, token_id: str
+) -> Tuple[CertificateResponse, Certificate]:
     ca = db.get(CertificateAuthority, payload.issuer_ca_id)
     if ca is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Issuer CA not found.")
@@ -202,6 +411,7 @@ def _issue_via_ca(payload: CertificateIssueRequest, db: Session) -> Tuple[Certif
         common_name=payload.common_name,
         dns_sans=payload.dns_sans,
         ip_sans=payload.ip_sans,
+        uri_sans=payload.uri_sans,
         organization=payload.organization,
         organizational_unit=payload.organizational_unit,
         country=payload.country,
@@ -219,7 +429,7 @@ def _issue_via_ca(payload: CertificateIssueRequest, db: Session) -> Tuple[Certif
         owner=payload.owner,
         enable_expiration_reminders=payload.enable_expiration_reminders,
     )
-    certificate = issue_cert_from_ca(config, ca, db)
+    certificate = issue_cert_from_ca(config, ca, db, issued_by_token_id=token_id)
     issued_key = getattr(certificate, "_issued_key_pem", None)
     settings = get_app_settings(db)
     key_allowed = _is_key_download_allowed(certificate, settings.allow_key_download_policy)
@@ -234,7 +444,9 @@ def _issue_via_ca(payload: CertificateIssueRequest, db: Session) -> Tuple[Certif
     return response, certificate
 
 
-def _issue_self_signed(payload: CertificateIssueRequest, db: Session) -> Tuple[CertificateResponse, Certificate]:
+def _issue_self_signed(
+    payload: CertificateIssueRequest, db: Session, token_id: str
+) -> Tuple[CertificateResponse, Certificate]:
     simple_config = SimpleCertConfig(
         common_name=payload.common_name,
         dns_sans=payload.dns_sans,
@@ -265,6 +477,7 @@ def _issue_self_signed(payload: CertificateIssueRequest, db: Session) -> Tuple[C
         store_in_labca=payload.store_in_db,
         environment_tags=payload.environment_tags,
         owner=payload.owner,
+        issued_by_token_id=token_id,
     )
     private_key = bundle.key_pem.decode("utf-8") if bundle.key_pem else None
     settings = get_app_settings(db)

@@ -21,6 +21,7 @@ def save_quick_cert_to_db(
     store_in_labca: bool,
     environment_tags: list[str] | None = None,
     owner: str | None = None,
+    issued_by_token_id: str | None = None,
 ) -> Certificate:
     """Persist a quick certificate issuance in the Certificate table."""
     if bundle.cert_pem is None:
@@ -49,6 +50,7 @@ def save_quick_cert_to_db(
             "stored_key_encrypted_pem": stored_key,
             "cert_pem": bundle.cert_pem.decode("utf-8"),
             "is_ephemeral": not store_in_labca,
+            "issued_by_token_id": issued_by_token_id,
         },
     )
     return certificate

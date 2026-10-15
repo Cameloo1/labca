@@ -72,6 +72,7 @@
       <h2 class="text-lg font-semibold text-gray-900">SANs</h2>
       <p><span class="font-medium text-gray-700">DNS:</span> {{ certificate.san_dns|join(", ") if certificate.san_dns else "None" }}</p>
       <p><span class="font-medium text-gray-700">IP:</span> {{ certificate.san_ips|join(", ") if certificate.san_ips else "None" }}</p>
+      <p><span class="font-medium text-gray-700">URI:</span> {{ certificate.san_uris|join(", ") if certificate.san_uris else "None" }}</p>
       <p><span class="font-medium text-gray-700">Type:</span> {{ certificate.type }}</p>
     </section>
   </div>

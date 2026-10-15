@@ -46,6 +46,7 @@ class Certificate(TimestampMixin, Base):
     common_name: Mapped[str] = mapped_column(String(255), nullable=False)
     san_dns: Mapped[list[str]] = mapped_column(JSON, nullable=False, default=list)
     san_ips: Mapped[list[str]] = mapped_column(JSON, nullable=False, default=list)
+    san_uris: Mapped[list[str]] = mapped_column(JSON, nullable=False, default=list)
     serial_number: Mapped[str] = mapped_column(String(128), nullable=False, unique=True)
     not_before: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     not_after: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
@@ -63,6 +64,8 @@ class Certificate(TimestampMixin, Base):
     is_ephemeral: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     revoked_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     revocation_reason: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    revocation_reason_code: Mapped[Optional[str]] = mapped_column(String(32), nullable=True)
+    issued_by_token_id: Mapped[Optional[str]] = mapped_column(String(36), nullable=True, index=True)
 
     ca: Mapped[Optional["CertificateAuthority"]] = relationship(
         "CertificateAuthority",

@@ -40,9 +40,11 @@ def issue_cert_from_ca(
     config: IssueFromCAConfig,
     ca: CertificateAuthority,
     db: Session,
+    *,
+    issued_by_token_id: Optional[str] = None,
 ):
     ca_certificate = x509.load_pem_x509_certificate(ca.cert_pem.encode("utf-8"))
-    ca_key = _load_ca_private_key(ca)
+    ca_key = load_ca_private_key(ca)
 
     now = datetime.now(timezone.utc)
     not_before = now - timedelta(minutes=1)
@@ -76,6 +78,8 @@ def issue_cert_from_ca(
         san_entries.append(x509.DNSName(dns))
     for ip in config.ip_sans:
         san_entries.append(x509.IPAddress(ip_address(ip)))
+    for uri in config.uri_sans:
+        san_entries.append(x509.UniformResourceIdentifier(uri))
     if san_entries:
         builder = builder.add_extension(x509.SubjectAlternativeName(san_entries), critical=False)
 
@@ -119,6 +123,7 @@ def issue_cert_from_ca(
             "common_name": config.common_name,
             "san_dns": config.dns_sans,
             "san_ips": config.ip_sans,
+            "san_uris": config.uri_sans,
             "serial_number": f"{certificate.serial_number:x}",
             "not_before": certificate.not_valid_before_utc,
             "not_after": certificate.not_valid_after_utc,
@@ -130,6 +135,7 @@ def issue_cert_from_ca(
             "stored_key_encrypted_pem": stored_key,
             "cert_pem": cert_pem,
             "is_ephemeral": not config.store_in_db,
+            "issued_by_token_id": issued_by_token_id,
         },
         ca=ca,
     )
@@ -138,7 +144,7 @@ def issue_cert_from_ca(
     return certificate_record
 
 
-def _load_ca_private_key(ca: CertificateAuthority):
+def load_ca_private_key(ca: CertificateAuthority):
     if not ca.key_encrypted_pem:
         raise ValueError("CA private key is not available for issuance.")
     try:

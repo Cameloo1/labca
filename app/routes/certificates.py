@@ -21,7 +21,7 @@ from app.models import (
 )
 from app.services import keystore
 from app.services.audit_service import log_action
-from app.services.revocation_service import revoke_certificate
+from app.services.revocation_service import UI_REASON_TO_RFC5280, revoke_certificate
 from app.services.settings_service import get_app_settings
 
 router = APIRouter(prefix="/certificates", tags=["certificates"])
@@ -239,7 +239,12 @@ async def revoke_certificate_submit(
         if cleaned:
             reason_text = f"{reason_label} - {cleaned}"
     reason_text = reason_text[:255]
-    revoke_certificate(certificate, reason_text, db)
+    revoke_certificate(
+        certificate,
+        reason_text,
+        db,
+        reason_code=UI_REASON_TO_RFC5280.get(reason_code, "unspecified"),
+    )
     log_action(
         db,
         actor_type=ActorType.USER,

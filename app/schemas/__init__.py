@@ -2,9 +2,14 @@ from .api import (
     CertificateIssueRequest,
     CertificateMetadata,
     CertificateResponse,
+    CertificateRevokeRequest,
+    CertificateRevokeResponse,
+    CertificateSignRequest,
+    CertificateSignResponse,
     TokenCreateRequest,
     TokenCreateResponse,
     TokenPermissions,
+    TokenPolicy,
 )
 from .ca import ImportCAConfig, RootCAConfig
 from .certs import (
@@ -26,9 +31,14 @@ __all__ = [
     "QuickCertRequest",
     "SimpleCertConfig",
     "TokenPermissions",
+    "TokenPolicy",
     "TokenCreateRequest",
     "TokenCreateResponse",
     "CertificateIssueRequest",
     "CertificateMetadata",
     "CertificateResponse",
+    "CertificateSignRequest",
+    "CertificateSignResponse",
+    "CertificateRevokeRequest",
+    "CertificateRevokeResponse",
 ]

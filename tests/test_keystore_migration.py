@@ -10,6 +10,7 @@ from sqlalchemy import create_engine, text
 
 from alembic import command
 from alembic.config import Config
+from alembic.script import ScriptDirectory
 from app.config import get_settings
 from app.services import keystore
 from app.services.keystore import KeyRing, aad_for
@@ -17,7 +18,7 @@ from app.services.keystore_migration import convert_legacy_values
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 PRE_REVISION = "20251201_0006"
-HEAD_REVISION = "20261014_0007"
+HEAD_REVISION = ScriptDirectory(str(REPO_ROOT / "alembic")).get_current_head()
 CA_ID = "11111111-1111-1111-1111-111111111111"
 CERT_ID = "22222222-2222-2222-2222-222222222222"
 CA_PLAINTEXT = b"legacy-ca-key"

@@ -21,6 +21,7 @@
               <th class="py-2 pr-4">Name</th>
               <th class="py-2 pr-4">Prefix</th>
               <th class="py-2 pr-4">Permissions</th>
+              <th class="py-2 pr-4">Policy</th>
               <th class="py-2 pr-4">Expires</th>
               <th class="py-2 pr-4">Last used</th>
               <th class="py-2 pr-4">Created</th>
@@ -43,6 +44,13 @@
                   {% endif %}
                   {% if not (token.permissions.issue or token.permissions.read or token.permissions.revoke) %}
                     <span class="text-xs text-gray-400">none</span>
+                  {% endif %}
+                </td>
+                <td class="py-2 pr-4 text-gray-700">
+                  {% if token.policy_summary %}
+                    {{ token.policy_summary }}
+                  {% else %}
+                    <span class="text-gray-400">None</span>
                   {% endif %}
                 </td>
                 <td class="py-2 pr-4 text-gray-700">
@@ -146,6 +154,35 @@
             class="mt-1 w-full rounded border-gray-300 focus:ring-blue-500 focus:border-blue-500"
             required
           />
+        </div>
+      </div>
+
+      <div class="space-y-3 border-t pt-4">
+        <label class="inline-flex items-center gap-2 text-sm font-medium text-gray-700">
+          <input type="checkbox" id="policy_enabled" name="policy_enabled" {% if form_values.policy_enabled %}checked{% endif %} class="rounded border-gray-300 text-blue-600" />
+          Restrict what this token may issue (policy)
+        </label>
+        <div class="grid gap-4 sm:grid-cols-2">
+          <div>
+            <label for="policy_dns_suffixes" class="block text-sm font-medium text-gray-700">Allowed DNS suffixes</label>
+            <input type="text" id="policy_dns_suffixes" name="policy_dns_suffixes" value="{{ form_values.policy_dns_suffixes }}" placeholder="lab.example, svc.lab.example" class="mt-1 w-full rounded border-gray-300 focus:ring-blue-500 focus:border-blue-500" />
+            <p class="mt-1 text-xs text-gray-500">Comma separated. An empty list allows no DNS names.</p>
+          </div>
+          <div>
+            <label for="policy_uri_prefixes" class="block text-sm font-medium text-gray-700">Allowed URI prefixes</label>
+            <input type="text" id="policy_uri_prefixes" name="policy_uri_prefixes" value="{{ form_values.policy_uri_prefixes }}" placeholder="spiffe://lab.example/ns/app/" class="mt-1 w-full rounded border-gray-300 focus:ring-blue-500 focus:border-blue-500" />
+            <p class="mt-1 text-xs text-gray-500">Comma separated. An empty list allows no URI SANs.</p>
+          </div>
+          <div>
+            <label for="policy_max_validity_hours" class="block text-sm font-medium text-gray-700">Maximum validity (hours)</label>
+            <input type="number" id="policy_max_validity_hours" name="policy_max_validity_hours" min="1" max="87600" value="{{ form_values.policy_max_validity_hours }}" class="mt-1 w-full rounded border-gray-300 focus:ring-blue-500 focus:border-blue-500" />
+          </div>
+          <div class="flex items-end">
+            <label class="inline-flex items-center gap-2 text-sm text-gray-700">
+              <input type="checkbox" id="policy_revoke_any" name="policy_revoke_any" {% if form_values.policy_revoke_any %}checked{% endif %} class="rounded border-gray-300 text-blue-600" />
+              May revoke certificates issued by other tokens
+            </label>
+          </div>
         </div>
       </div>
 

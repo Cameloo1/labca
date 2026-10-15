@@ -102,6 +102,10 @@
         <label class="block text-sm font-medium text-gray-700" for="ip_sans">IP SANs</label>
         <input type="text" id="ip_sans" name="ip_sans" value="{{ form_values.ip_sans }}" class="mt-1 w-full rounded-md border-gray-300 focus:border-blue-500 focus:ring-blue-500" placeholder="127.0.0.1, 10.0.0.5" />
       </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700" for="uri_sans">URI SANs</label>
+        <input type="text" id="uri_sans" name="uri_sans" value="{{ form_values.uri_sans }}" class="mt-1 w-full rounded-md border-gray-300 focus:border-blue-500 focus:ring-blue-500" placeholder="spiffe://lab.example/ns/app/sa/web" />
+      </div>
     </section>
 
     <section class="space-y-4">

@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 import hashlib
+import hmac
 import secrets
 from datetime import datetime, timezone
-from typing import Dict, Optional, Tuple
+from typing import Any, Dict, Optional, Tuple
 
 from sqlalchemy.orm import Session
 
@@ -17,6 +18,7 @@ def create_token(
     permissions: Dict[str, bool],
     expires_at: Optional[datetime],
     db: Session,
+    policy: Optional[Dict[str, Any]] = None,
 ) -> Tuple[ApiToken, str]:
     raw_token = _generate_raw_token()
     token = ApiToken(
@@ -25,6 +27,7 @@ def create_token(
         token_prefix=raw_token[:TOKEN_PREFIX_LENGTH],
         permissions_json=permissions,
         expires_at=expires_at,
+        policy_json=policy,
     )
     db.add(token)
     db.commit()
@@ -36,7 +39,8 @@ def validate_token(raw_token: str, db: Session) -> Optional[ApiToken]:
     if not raw_token:
         return None
     token_hash = _hash_token(raw_token)
-    token = db.query(ApiToken).filter(ApiToken.token_hash == token_hash).one_or_none()
+    candidates = db.query(ApiToken).filter(ApiToken.token_prefix == raw_token[:TOKEN_PREFIX_LENGTH]).all()
+    token = next((c for c in candidates if hmac.compare_digest(c.token_hash, token_hash)), None)
     if token is None:
         return None
     now = datetime.now(timezone.utc)
